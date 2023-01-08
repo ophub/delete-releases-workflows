@@ -1,0 +1,67 @@
+name: "delete-releases-workflows"
+author: "ophub"
+description: "Delete older releases and workflow runs"
+inputs:
+  repo:
+    description: "Repo name in the form of <owner>/<repo>"
+    required: false
+  delete_tags:
+    description: "Whether to delete associated tags"
+    required: false
+    default: "true"
+  releases_keep_latest:
+    description: "How many latest releases to keep"
+    required: true
+  releases_keep_keyword:
+    description: "Keyword of the keep releases"
+    required: false
+    default: ""
+  workflows_keep_keyword:
+    description: "keywords for keep workflows"
+    required: false
+    default: ""
+  workflows_keep_day:
+    description: "Days to keep workflows"
+    required: false
+    default: "30"
+  gh_token:
+      description: "Set the token"
+      required: true
+
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      run: |
+        cd ${GITHUB_ACTION_PATH}
+        echo -e "Current Actions path: ${PWD}"
+
+        repo="${{ inputs.repo }}"
+        [[ -z "${repo}" ]] && repo="${GITHUB_REPOSITORY}"
+
+        delete_tags="${{ inputs.delete_tags }}"
+
+        releases_keep_latest="${{ inputs.releases_keep_latest }}"
+        [[ -z "${{ inputs.releases_keep_latest }}" ]] && echo "Please set the reserved number of releases: [ releases_keep_latest ]" && exit 1
+
+        releases_keep_keyword="${{ inputs.releases_keep_keyword }}"
+        workflows_keep_keyword="${{ inputs.workflows_keep_keyword }}"
+        workflows_keep_day="${{ inputs.workflows_keep_day }}"
+
+        gh_token="${{ inputs.gh_token }}"
+        [[ -z "${{ inputs.gh_token }}" ]] && echo "Please set the token: [ gh_token ]" && exit 1
+
+        make_command=""
+        [[ -n "${repo}" ]] && make_command="${make_command} -r ${repo}"
+        [[ -n "${delete_tags}" ]] && make_command="${make_command} -t ${delete_tags}"
+        [[ -n "${releases_keep_latest}" ]] && make_command="${make_command} -l ${releases_keep_latest}"
+        [[ -n "${releases_keep_keyword}" ]] && make_command="${make_command} -w ${releases_keep_keyword}"
+        [[ -n "${workflows_keep_keyword}" ]] && make_command="${make_command} -k ${workflows_keep_keyword}"
+        [[ -n "${workflows_keep_day}" ]] && make_command="${make_command} -d ${workflows_keep_day}"
+        [[ -n "${gh_token}" ]] && make_command="${make_command} -g ${gh_token}"
+        chmod +x del.sh
+        ./del.sh ${make_command}
+
+branding:
+  icon: "terminal"
+  color: "gray-dark"
