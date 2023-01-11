@@ -36,7 +36,7 @@ init_var() {
     echo -e "${STEPS} Start Initializing Variables..."
 
     # Install the necessary dependent packages
-    sudo apt-get -qq update && sudo apt-get -qq install -y jq
+    sudo apt-get -qq update && sudo apt-get -qq install -y jq curl
 
     # If it is followed by [ : ], it means that the option requires a parameter value
     get_all_ver="$(getopt "r:t:l:w:k:d:o:g:" "${@}")"

@@ -21,16 +21,16 @@ Introduce this Actions in the `.github/workflows/*.yml` workflows script to use,
 
 ## Parameter description / 参数说明
 
-| parameter/参数           | Defaults/默认值    | Description/说明                                                  |
-|-------------------------|-------------------|-------------------------------------------------------------------|
-| repo                    | `<owner>/<repo>`  | [Optional] Set the running repository, the default is the current repository. <br />[可选项] 设置运行仓库，默认为当前仓库。 |
-| delete_tags             | true              | [Optional] Delete tags associated with releases (options: true/false). <br />[可选项] 删除与 Releases 关联的 tags (选项：true/false)。 |
-| releases_keep_latest    | None / 无         | [Required] Set how many latest Releases versions to keep (Integer. eg: 5), Set to `0` to delete all. <br />[必选] 设置保留多少个最新的 Releases 版本（整数。如：5），设置为 `0` 表示全部删除。 |
-| releases_keep_keyword   | None / 无         | [Optional] The keywords of the releases that need to be reserved (string). <br />[可选项] 需要保留的 Releases 的关键字（字符串）。 |
-| workflows_keep_keyword  | None / 无         | [Optional] The keywords of workflows runs that need to be reserved (string). <br />[可选项] 需要保留的 workflows 运行记录的关键字（字符串）。 |
-| workflows_keep_day      | 30                | [Optional] Set the number of days to keep workflow runs (Integer. eg: 30), Set to `0` to delete all. <br />[可选项] 设置保留多少天以内的 workflows 记录（整数。如：30），设置为 `0` 表示全部删除。 |
-| out_log                 | false             | [Optional] Whether to output a listing log for each step (options: true/false). <br />[可选项] 是否为每个步骤输出一个列表日志 (选项：true/false)。 |
-| gh_token                | None / 无         | [Required] Set the [GH_TOKEN](https://github.com/ophub/amlogic-s9xxx-armbian/tree/main/build-armbian/documents#2-set-the-privacy-variable-github_token) for performing delete operations. <br />[必选] 设置执行删除操作的 [GH_TOKEN](https://github.com/ophub/amlogic-s9xxx-armbian/tree/main/build-armbian/documents#2-set-the-privacy-variable-github_token) 口令。 |
+| parameter               | Required | Defaults         | Description                                                       |
+|-------------------------|----------|------------------|-------------------------------------------------------------------|
+| repo                    | false    | `<owner>/<repo>` | Set the repository to perform the operation, the default is the current repository. <br />设置执行操作的仓库，默认为当前仓库。 |
+| delete_tags             | false    | true             | Delete tags associated with releases (options: true/false). <br />删除与 Releases 关联的 tags (选项：true/false)。 |
+| releases_keep_latest    | `true`   | ""               | Set how many latest Releases versions to keep (Integer. eg: 5), Set to `0` to delete all. <br />设置保留几个最新的 Releases 版本（整数。如：5），设置为 `0` 表示全部删除。 |
+| releases_keep_keyword   | false    | ""               | The keywords of the releases that need to be reserved. <br />需要保留的 Releases 的关键字。 |
+| workflows_keep_keyword  | false    | ""               | The keywords of workflows runs that need to be reserved. <br />需要保留的 workflows 运行记录的关键字。 |
+| workflows_keep_day      | `true`   | ""               | Set the number of days to keep workflow runs (Integer. eg: 30), Set to `0` to delete all. <br />设置保留几天以内的 workflows 记录（整数。如：30），设置为 `0` 表示全部删除。 |
+| out_log                 | false    | false            | Whether to output a listing log for each step (options: true/false). <br />是否为每个步骤输出一个列表日志 (选项：true/false)。 |
+| gh_token                | `true`   | ""               | Set the [GH_TOKEN](https://github.com/ophub/amlogic-s9xxx-armbian/tree/main/build-armbian/documents#2-set-the-privacy-variable-github_token) for performing delete operations. <br />设置执行删除操作的 [GH_TOKEN](https://github.com/ophub/amlogic-s9xxx-armbian/tree/main/build-armbian/documents#2-set-the-privacy-variable-github_token) 口令。 |
 
 ## Links / 链接
 
