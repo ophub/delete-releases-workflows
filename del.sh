@@ -166,7 +166,7 @@ get_releases_list() {
     # Sort and generate a keep list of releases
     if [[ -s "${all_releases_list}" && -n "${releases_keep_latest}" ]]; then
         # Sort by date and select the list of releases that need to be kept
-        cat ${all_releases_list} | jq -r '.pub_date' | tr ' ' '\n' | sort -r | head -${releases_keep_latest} >${keep_releases_date_list}
+        cat ${all_releases_list} | jq -r '.pub_date' | tr ' ' '\n' | sort -r | head -n ${releases_keep_latest} >${keep_releases_date_list}
         [[ -s "${keep_releases_date_list}" ]] && {
             # Generate a complete json list for log output
             cat ${keep_releases_date_list} | while read line; do grep "${line}" ${all_releases_list} >>${keep_releases_list}; done
