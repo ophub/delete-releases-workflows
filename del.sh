@@ -69,7 +69,10 @@ init_var() {
             ;;
         -w | --releases_keep_keyword)
             if [[ -n "${2}" ]]; then
-                releases_keep_keyword="${2}"
+                oldIFS="${IFS}"
+                IFS="/"
+                releases_keep_keyword=(${2})
+                IFS="${oldIFS}"
                 shift
             else
                 error_msg "Invalid -w parameter [ ${2} ]!"
@@ -77,7 +80,10 @@ init_var() {
             ;;
         -k | --workflows_keep_keyword)
             if [[ -n "${2}" ]]; then
-                workflows_keep_keyword="${2}"
+                oldIFS="${IFS}"
+                IFS="/"
+                workflows_keep_keyword=(${2})
+                IFS="${oldIFS}"
                 shift
             else
                 error_msg "Invalid -k parameter [ ${2} ]!"
@@ -117,8 +123,8 @@ init_var() {
     echo -e "${INFO} repo: [ ${repo} ]"
     echo -e "${INFO} delete_tags: [ ${delete_tags} ]"
     echo -e "${INFO} releases_keep_latest: [ ${releases_keep_latest} ]"
-    echo -e "${INFO} releases_keep_keyword: [ ${releases_keep_keyword} ]"
-    echo -e "${INFO} workflows_keep_keyword: [ ${workflows_keep_keyword} ]"
+    echo -e "${INFO} releases_keep_keyword: [ $(echo ${releases_keep_keyword[*]} | xargs) ]"
+    echo -e "${INFO} workflows_keep_keyword: [ $(echo ${workflows_keep_keyword[*]} | xargs) ]"
     echo -e "${INFO} workflows_keep_day: [ ${workflows_keep_day} ]"
     echo -e "${INFO} out_log: [ ${out_log} ]"
     echo -e ""
@@ -150,8 +156,12 @@ get_releases_list() {
     # List of releases keywords to keep
     keep_releases_keyword_list="josn_keep_releases_keyword_list"
     # Remove releases that match keywords and need to be kept
-    if [[ -n "${releases_keep_keyword}" && -s "${all_releases_list}" ]]; then
-        cat ${all_releases_list} | jq -r .name | grep ${releases_keep_keyword} >${keep_releases_keyword_list}
+    if [[ "${#releases_keep_keyword[*]}" -ge "1" && -s "${all_releases_list}" ]]; then
+        for ((i = 0; i < ${#releases_keep_keyword[*]}; i++)); do
+            cat ${all_releases_list} | jq -r .name | grep -E "${releases_keep_keyword[$i]}" >>${keep_releases_keyword_list}
+            [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.3) Filter Releases keywords: [ ${releases_keep_keyword[$i]} ]"
+        done
+        [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.3) Filter Releases list:\n$(cat ${keep_releases_keyword_list})"
         [[ -s "${keep_releases_keyword_list}" ]] && cat ${keep_releases_keyword_list} | while read line; do sed -i "/${line}/d" ${all_releases_list}; done
         echo -e "${INFO} (1.3) The keyword filtering successfully."
         [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.3) Current releases list:\n$(cat ${all_releases_list})"
@@ -257,8 +267,12 @@ get_workflows_list() {
     # The workflows containing keywords that need to be keep
     keep_keyword_workflows_list="josn_keep_keyword_workflows_list"
     # Remove workflows that match keywords and need to be kept
-    if [[ -n "${workflows_keep_keyword}" && -s "${all_workflows_list}" ]]; then
-        cat ${all_workflows_list} | jq -r .name | grep ${workflows_keep_keyword} >${keep_keyword_workflows_list}
+    if [[ "${#workflows_keep_keyword[*]}" -ge "1" && -s "${all_workflows_list}" ]]; then
+        for ((i = 0; i < ${#workflows_keep_keyword[*]}; i++)); do
+            cat ${all_workflows_list} | jq -r .name | grep -E "${workflows_keep_keyword[$i]}" >>${keep_keyword_workflows_list}
+            [[ "${out_log}" == "true" ]] && echo -e "${INFO} (3.3) Filter Workflows keywords: [ ${workflows_keep_keyword[$i]} ]"
+        done
+        [[ "${out_log}" == "true" ]] && echo -e "${INFO} (3.3) Filter Workflows list:\n$(cat ${keep_keyword_workflows_list})"
         [[ -s "${keep_keyword_workflows_list}" ]] && cat ${keep_keyword_workflows_list} | while read line; do sed -i "/${line}/d" ${all_workflows_list}; done
         echo -e "${INFO} (3.3) The keyword filtering successfully."
         [[ "${out_log}" == "true" ]] && echo -e "${INFO} (3.3) Current workflows list:\n$(cat ${all_workflows_list})"
