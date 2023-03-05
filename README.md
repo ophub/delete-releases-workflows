@@ -19,18 +19,22 @@ Introduce this Actions in the `.github/workflows/*.yml` workflows script to use,
     gh_token: ${{ secrets.GH_TOKEN }}
 ```
 
-## Parameter description / 参数说明
+## Setting instructions / 设置说明
 
-| parameter               | Required | Defaults         | Description                                                       |
-|-------------------------|----------|------------------|-------------------------------------------------------------------|
-| repo                    | false    | `<owner>/<repo>` | Set the repository to perform the operation, the default is the current repository. <br />设置执行操作的仓库，默认为当前仓库。 |
-| delete_tags             | false    | true             | Delete tags associated with releases (options: true/false). <br />删除与 Releases 关联的 tags (选项：true/false)。 |
-| releases_keep_latest    | `true`   | ""               | Set how many latest Releases versions to keep (Integer. eg: 5), Set to `0` to delete all. <br />设置保留几个最新的 Releases 版本（整数。如：5），设置为 `0` 表示全部删除。 |
-| releases_keep_keyword   | false    | ""               | The keywords of the releases that need to be reserved, Use `/` to separate multiple keywords. <br />需要保留的 Releases 的关键字，多个关键字使用`/`分割。 |
-| workflows_keep_keyword  | false    | ""               | The keywords of workflows runs that need to be reserved, Use `/` to separate multiple keywords. <br />需要保留的 workflows 运行记录的关键字，多个关键字使用`/`分割。 |
-| workflows_keep_day      | `true`   | ""               | Set the number of days to keep workflow runs (Integer. eg: 30), Set to `0` to delete all. <br />设置保留几天以内的 workflows 记录（整数。如：30），设置为 `0` 表示全部删除。 |
-| out_log                 | false    | false            | Whether to output a listing log for each step (options: true/false). <br />是否为每个步骤输出一个列表日志 (选项：true/false)。 |
-| gh_token                | `true`   | ""               | Set the [GH_TOKEN](https://github.com/ophub/amlogic-s9xxx-armbian/tree/main/build-armbian/documents#2-set-the-privacy-variable-github_token) for performing delete operations. <br />设置执行删除操作的 [GH_TOKEN](https://github.com/ophub/amlogic-s9xxx-armbian/tree/main/build-armbian/documents#2-set-the-privacy-variable-github_token) 口令。 |
+You can configure removal settings using the following keys in your delete.yml file:
+
+您可以在 delete.yml 文件中使用以下选项配置删除设置：
+
+| Key / 选项               | Required   | Description / 说明                       |
+| ----------------------- | ---------- | ---------------------------------------- |
+| gh_token                | `Required`<br />`必选项` | Set the [GH_TOKEN](https://github.com/ophub/amlogic-s9xxx-armbian/tree/main/build-armbian/documents#2-set-the-privacy-variable-github_token) for performing delete operations. <br />设置执行删除操作的 [GH_TOKEN](https://github.com/ophub/amlogic-s9xxx-armbian/tree/main/build-armbian/documents#2-set-the-privacy-variable-github_token) 口令。 |
+| workflows_keep_day      | `Required`<br />`必选项` | Set the number of days to keep workflow runs (`Integer`. eg: 30), Set to `0` to delete all. <br />设置保留几天以内的 workflows 记录（`整数`。如：30），设置为 `0` 表示全部删除。 |
+| workflows_keep_keyword  | Optional<br />可选项   | The keywords of workflows runs that need to be reserved, Use `/` to separate multiple keywords (eg: `book/tool`). <br />需要保留的 workflows 运行记录的`关键字`，多个关键字使用 `/` 分割（例如：`book/tool`）。 |
+| releases_keep_latest    | `Required`<br />`必选项` | Set how many latest Releases versions to keep (`Integer`. eg: 5), Set to `0` to delete all. <br />设置保留几个最新的 Releases 版本（`整数`。如：5），设置为 `0` 表示全部删除。 |
+| releases_keep_keyword   | Optional<br />可选项   | The keywords of the releases that need to be reserved, Use `/` to separate multiple keywords (eg: `book/tool`). <br />需要保留的 Releases 的`关键字`，多个关键字使用 `/` 分割（例如：`book/tool`）。 |
+| delete_tags             | Optional<br />可选项   | Delete tags associated with releases (options: `true`/`false`). <br />删除与 Releases 关联的 tags (选项：`true`/`false`)。 |
+| out_log                 | Optional<br />可选项   | Whether to output a listing log for each step (options: `true`/`false`). <br />是否为每个步骤输出一个列表日志 (选项：`true`/`false`)。 |
+| repo                    | Optional<br />可选项   | Set the `<owner>/<repo>` to perform the operation, the default is the current repository. <br />设置执行操作的 `<owner>/<repo>` ，默认为当前仓库。 |
 
 ## Links / 链接
 
