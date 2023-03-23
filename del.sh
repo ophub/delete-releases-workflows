@@ -20,11 +20,11 @@
 #=============================== Set make environment variables ===============================
 #
 # Set default value
-del_releases="false"
+delete_releases="false"
 delete_tags="false"
 releases_keep_latest="90"
 releases_keep_keyword=()
-del_workflows="false"
+delete_workflows="false"
 workflows_keep_day="90"
 workflows_keep_keyword=()
 out_log="false"
@@ -62,9 +62,9 @@ init_var() {
                 error_msg "Invalid -r parameter [ ${2} ]!"
             fi
             ;;
-        -p | --del_releases)
+        -p | --delete_releases)
             if [[ -n "${2}" ]]; then
-                del_releases="${2}"
+                delete_releases="${2}"
                 shift
             else
                 error_msg "Invalid -p parameter [ ${2} ]!"
@@ -97,9 +97,9 @@ init_var() {
                 error_msg "Invalid -w parameter [ ${2} ]!"
             fi
             ;;
-        -s | --del_workflows)
+        -s | --delete_workflows)
             if [[ -n "${2}" ]]; then
-                del_workflows="${2}"
+                delete_workflows="${2}"
                 shift
             else
                 error_msg "Invalid -s parameter [ ${2} ]!"
@@ -148,11 +148,11 @@ init_var() {
     done
 
     echo -e "${INFO} repo: [ ${repo} ]"
-    echo -e "${INFO} del_releases: [ ${del_releases} ]"
+    echo -e "${INFO} delete_releases: [ ${delete_releases} ]"
     echo -e "${INFO} delete_tags: [ ${delete_tags} ]"
     echo -e "${INFO} releases_keep_latest: [ ${releases_keep_latest} ]"
     echo -e "${INFO} releases_keep_keyword: [ ${#releases_keep_keyword[*]} : $(echo ${releases_keep_keyword[*]} | xargs) ]"
-    echo -e "${INFO} del_workflows: [ ${del_workflows} ]"
+    echo -e "${INFO} delete_workflows: [ ${delete_workflows} ]"
     echo -e "${INFO} workflows_keep_day: [ ${workflows_keep_day} ]"
     echo -e "${INFO} workflows_keep_keyword: [ ${#workflows_keep_keyword[*]} : $(echo ${workflows_keep_keyword[*]} | xargs) ]"
     echo -e "${INFO} out_log: [ ${out_log} ]"
@@ -386,7 +386,7 @@ echo -e "${STEPS} Welcome to use the delete older releases and workflow runs too
 init_var "${@}"
 
 # Delete release
-if [[ "${del_releases}" == "true" ]]; then
+if [[ "${delete_releases}" == "true" ]]; then
     get_releases_list
     del_release_files
     del_release_tag
@@ -395,7 +395,7 @@ else
 fi
 
 # Delete workflows
-if [[ "${del_workflows}" == "true" ]]; then
+if [[ "${delete_workflows}" == "true" ]]; then
     get_workflows_list
     del_workflows_runs
 else
