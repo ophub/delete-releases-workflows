@@ -23,10 +23,10 @@
 del_releases="false"
 delete_tags="false"
 releases_keep_latest="90"
-releases_keep_keyword=""
+releases_keep_keyword=()
 del_workflows="false"
 workflows_keep_day="90"
-workflows_keep_keyword=""
+workflows_keep_keyword=()
 out_log="false"
 
 # Set font color
@@ -151,10 +151,10 @@ init_var() {
     echo -e "${INFO} del_releases: [ ${del_releases} ]"
     echo -e "${INFO} delete_tags: [ ${delete_tags} ]"
     echo -e "${INFO} releases_keep_latest: [ ${releases_keep_latest} ]"
-    echo -e "${INFO} releases_keep_keyword: [ $(echo ${releases_keep_keyword[*]} | xargs) ]"
+    echo -e "${INFO} releases_keep_keyword: [ ${#releases_keep_keyword[*]} : $(echo ${releases_keep_keyword[*]} | xargs) ]"
     echo -e "${INFO} del_workflows: [ ${del_workflows} ]"
     echo -e "${INFO} workflows_keep_day: [ ${workflows_keep_day} ]"
-    echo -e "${INFO} workflows_keep_keyword: [ $(echo ${workflows_keep_keyword[*]} | xargs) ]"
+    echo -e "${INFO} workflows_keep_keyword: [ ${#workflows_keep_keyword[*]} : $(echo ${workflows_keep_keyword[*]} | xargs) ]"
     echo -e "${INFO} out_log: [ ${out_log} ]"
     echo -e ""
 }
