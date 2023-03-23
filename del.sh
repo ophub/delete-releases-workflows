@@ -12,12 +12,23 @@
 # error_msg           : Output error message
 # init_var            : Initialize all variables
 # get_releases_list   : Get the release list
-# del_release_tag     : Delete releases and tags
+# del_release_files   : Delete releases files
+# del_release_tag     : Delete releases tags
 # get_workflows_list  : Get the workflows list
 # del_workflows_runs  : Delete workflows runs
 #
 #=============================== Set make environment variables ===============================
 #
+# Set default value
+del_releases="false"
+delete_tags="false"
+releases_keep_latest="90"
+releases_keep_keyword=""
+del_workflows="false"
+workflows_keep_day="90"
+workflows_keep_keyword=""
+out_log="false"
+
 # Set font color
 STEPS="[\033[95m STEPS \033[0m]"
 INFO="[\033[94m INFO \033[0m]"
@@ -39,7 +50,7 @@ init_var() {
     sudo apt-get -qq update && sudo apt-get -qq install -y jq curl
 
     # If it is followed by [ : ], it means that the option requires a parameter value
-    get_all_ver="$(getopt "r:t:l:w:k:d:o:g:" "${@}")"
+    get_all_ver="$(getopt "r:p:t:l:w:k:s:d:o:g:" "${@}")"
 
     while [[ -n "${1}" ]]; do
         case "${1}" in
@@ -49,6 +60,14 @@ init_var() {
                 shift
             else
                 error_msg "Invalid -r parameter [ ${2} ]!"
+            fi
+            ;;
+        -p | --del_releases)
+            if [[ -n "${2}" ]]; then
+                del_releases="${2}"
+                shift
+            else
+                error_msg "Invalid -p parameter [ ${2} ]!"
             fi
             ;;
         -t | --delete_tags)
@@ -78,6 +97,22 @@ init_var() {
                 error_msg "Invalid -w parameter [ ${2} ]!"
             fi
             ;;
+        -s | --del_workflows)
+            if [[ -n "${2}" ]]; then
+                del_workflows="${2}"
+                shift
+            else
+                error_msg "Invalid -s parameter [ ${2} ]!"
+            fi
+            ;;
+        -d | --workflows_keep_day)
+            if [[ -n "${2}" ]]; then
+                workflows_keep_day="${2}"
+                shift
+            else
+                error_msg "Invalid -d parameter [ ${2} ]!"
+            fi
+            ;;
         -k | --workflows_keep_keyword)
             if [[ -n "${2}" ]]; then
                 oldIFS="${IFS}"
@@ -87,14 +122,6 @@ init_var() {
                 shift
             else
                 error_msg "Invalid -k parameter [ ${2} ]!"
-            fi
-            ;;
-        -d | --workflows_keep_day)
-            if [[ -n "${2}" ]]; then
-                workflows_keep_day="${2}"
-                shift
-            else
-                error_msg "Invalid -d parameter [ ${2} ]!"
             fi
             ;;
         -o | --out_log)
@@ -121,11 +148,13 @@ init_var() {
     done
 
     echo -e "${INFO} repo: [ ${repo} ]"
+    echo -e "${INFO} del_releases: [ ${del_releases} ]"
     echo -e "${INFO} delete_tags: [ ${delete_tags} ]"
     echo -e "${INFO} releases_keep_latest: [ ${releases_keep_latest} ]"
     echo -e "${INFO} releases_keep_keyword: [ $(echo ${releases_keep_keyword[*]} | xargs) ]"
-    echo -e "${INFO} workflows_keep_keyword: [ $(echo ${workflows_keep_keyword[*]} | xargs) ]"
+    echo -e "${INFO} del_workflows: [ ${del_workflows} ]"
     echo -e "${INFO} workflows_keep_day: [ ${workflows_keep_day} ]"
+    echo -e "${INFO} workflows_keep_keyword: [ $(echo ${workflows_keep_keyword[*]} | xargs) ]"
     echo -e "${INFO} out_log: [ ${out_log} ]"
     echo -e ""
 }
@@ -203,8 +232,8 @@ get_releases_list() {
     echo -e ""
 }
 
-del_release_tag() {
-    echo -e "${STEPS} Start deleting releases and tags..."
+del_release_files() {
+    echo -e "${STEPS} Start deleting releases files..."
 
     # Delete releases
     if [[ -s "${del_releases_list}" && -n "$(cat ${del_releases_list} | jq -r .id)" ]]; then
@@ -222,8 +251,14 @@ del_release_tag() {
         echo -e "${TIPS} (2.1) No releases need to be deleted. skip."
     fi
 
+    echo -e ""
+}
+
+del_release_tag() {
+    echo -e "${STEPS} Start deleting tags..."
+
     # Delete the tags associated with releases
-    if [[ "${delete_tags}" = "true" && -s "${del_releases_list}" && -n "$(cat ${del_releases_list} | jq -r .tag_name)" ]]; then
+    if [[ "${delete_tags}" == "true" && -s "${del_releases_list}" && -n "$(cat ${del_releases_list} | jq -r .tag_name)" ]]; then
         cat ${del_releases_list} | jq -r .tag_name | while read tag_name; do
             {
                 curl -s \
@@ -349,10 +384,23 @@ echo -e "${STEPS} Welcome to use the delete older releases and workflow runs too
 
 # Perform related operations in sequence
 init_var "${@}"
-get_releases_list
-del_release_tag
-get_workflows_list
-del_workflows_runs
+
+# Delete release
+if [[ "${del_releases}" == "true" ]]; then
+    get_releases_list
+    del_release_files
+    del_release_tag
+else
+    echo -e "${STEPS} Do not delete releases and tags."
+fi
+
+# Delete workflows
+if [[ "${del_workflows}" == "true" ]]; then
+    get_workflows_list
+    del_workflows_runs
+else
+    echo -e "${STEPS} Do not delete workflows."
+fi
 
 # Show all process completion prompts
 echo -e "${SUCCESS} All process completed successfully."
