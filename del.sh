@@ -12,8 +12,8 @@
 # error_msg           : Output error message
 # init_var            : Initialize all variables
 # get_releases_list   : Get the release list
-# del_release_files   : Delete releases files
-# del_release_tag     : Delete releases tags
+# del_releases_file   : Delete releases files
+# del_releases_tags   : Delete releases tags
 # get_workflows_list  : Get the workflows list
 # del_workflows_runs  : Delete workflows runs
 #
@@ -232,7 +232,7 @@ get_releases_list() {
     echo -e ""
 }
 
-del_release_files() {
+del_releases_file() {
     echo -e "${STEPS} Start deleting releases files..."
 
     # Delete releases
@@ -254,7 +254,7 @@ del_release_files() {
     echo -e ""
 }
 
-del_release_tag() {
+del_releases_tags() {
     echo -e "${STEPS} Start deleting tags..."
 
     # Delete the tags associated with releases
@@ -388,8 +388,8 @@ init_var "${@}"
 # Delete release
 if [[ "${delete_releases}" == "true" ]]; then
     get_releases_list
-    del_release_files
-    del_release_tag
+    del_releases_file
+    del_releases_tags
 else
     echo -e "${STEPS} Do not delete releases and tags."
 fi
