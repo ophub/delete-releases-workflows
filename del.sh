@@ -50,7 +50,7 @@ init_var() {
     sudo apt-get -qq update && sudo apt-get -qq install -y jq curl
 
     # If it is followed by [ : ], it means that the option requires a parameter value
-    get_all_ver="$(getopt "r:p:t:l:w:k:s:d:o:g:" "${@}")"
+    get_all_ver="$(getopt "r:p:t:l:w:s:d:k:o:g:" "${@}")"
 
     while [[ -n "${1}" ]]; do
         case "${1}" in
@@ -151,10 +151,10 @@ init_var() {
     echo -e "${INFO} delete_releases: [ ${delete_releases} ]"
     echo -e "${INFO} delete_tags: [ ${delete_tags} ]"
     echo -e "${INFO} releases_keep_latest: [ ${releases_keep_latest} ]"
-    echo -e "${INFO} releases_keep_keyword: [ ${#releases_keep_keyword[*]} : $(echo ${releases_keep_keyword[*]} | xargs) ]"
+    echo -e "${INFO} releases_keep_keyword: [ $(echo ${releases_keep_keyword[*]} | xargs) ]"
     echo -e "${INFO} delete_workflows: [ ${delete_workflows} ]"
     echo -e "${INFO} workflows_keep_day: [ ${workflows_keep_day} ]"
-    echo -e "${INFO} workflows_keep_keyword: [ ${#workflows_keep_keyword[*]} : $(echo ${workflows_keep_keyword[*]} | xargs) ]"
+    echo -e "${INFO} workflows_keep_keyword: [ $(echo ${workflows_keep_keyword[*]} | xargs) ]"
     echo -e "${INFO} out_log: [ ${out_log} ]"
     echo -e ""
 }
