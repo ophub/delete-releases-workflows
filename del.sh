@@ -163,31 +163,23 @@ get_releases_list() {
     echo -e "${STEPS} Start generating the releases list..."
 
     # Temporary save file for the results returned by api.github.com for releases
-    gh_api_releases="josn_api_releases"
+    all_releases_list="josn_api_releases"
     curl -s \
         -H "Accept: application/vnd.github+json" \
         -H "Authorization: Bearer ${gh_token}" \
-        https://api.github.com/repos/${repo}/releases \
-        >${gh_api_releases}
-    [[ -s "${gh_api_releases}" ]] || error_msg "(1.1) The api.github.com for releases query failed."
+        https://api.github.com/repos/${repo}/releases |
+        jq -c '.[] | {date: .published_at, id: .id, tag_name: .tag_name}' \
+            >${all_releases_list}
+    [[ -s "${all_releases_list}" ]] || error_msg "(1.1) The api.github.com for releases query failed."
     echo -e "${INFO} (1.1) The api.github.com for releases request successfully."
-
-    # All lists in releases
-    all_releases_list="josn_all_releases_list"
-    cat ${gh_api_releases} | jq -c '.[] | {pub_date: .published_at, id: .id, name: .name, tag_name: .tag_name}' >${all_releases_list}
-    if [[ -s "${all_releases_list}" ]]; then
-        echo -e "${INFO} (1.2) The complete releases list is generated successfully."
-        [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.2) Current release list:\n$(cat ${all_releases_list})"
-    else
-        echo -e "${TIPS} (1.2) The releases list is empty."
-    fi
+    [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.2) Current release list:\n$(cat ${all_releases_list})"
 
     # List of releases keywords to keep
     keep_releases_keyword_list="josn_keep_releases_keyword_list"
     # Remove releases that match keywords and need to be kept
     if [[ "${#releases_keep_keyword[*]}" -ge "1" && -s "${all_releases_list}" ]]; then
         for ((i = 0; i < ${#releases_keep_keyword[*]}; i++)); do
-            cat ${all_releases_list} | jq -r .name | grep -E "${releases_keep_keyword[$i]}" >>${keep_releases_keyword_list}
+            cat ${all_releases_list} | jq -r .tag_name | grep -E "${releases_keep_keyword[$i]}" >>${keep_releases_keyword_list}
             [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.3) Filter Releases keywords: [ ${releases_keep_keyword[$i]} ]"
         done
         [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.3) Filter Releases list:\n$(cat ${keep_releases_keyword_list})"
@@ -205,7 +197,7 @@ get_releases_list() {
     # Sort and generate a keep list of releases
     if [[ -s "${all_releases_list}" && -n "${releases_keep_latest}" ]]; then
         # Sort by date and select the list of releases that need to be kept
-        cat ${all_releases_list} | jq -r '.pub_date' | tr ' ' '\n' | sort -r | head -n ${releases_keep_latest} >${keep_releases_date_list}
+        cat ${all_releases_list} | jq -r '.date' | tr ' ' '\n' | sort -r | head -n ${releases_keep_latest} >${keep_releases_date_list}
         [[ -s "${keep_releases_date_list}" ]] && {
             # Generate a complete json list for log output
             cat ${keep_releases_date_list} | while read line; do grep "${line}" ${all_releases_list} >>${keep_releases_list}; done
@@ -280,24 +272,16 @@ get_workflows_list() {
     echo -e "${STEPS} Start generating the workflows list..."
 
     # Temporary save file for the results returned by api.github.com for workflows runs
-    gh_api_workflows="josn_api_workflows"
+    all_workflows_list="josn_api_workflows"
     curl -s \
         -H "Accept: application/vnd.github+json" \
         -H "Authorization: Bearer ${gh_token}" \
-        https://api.github.com/repos/${repo}/actions/runs \
-        >${gh_api_workflows}
-    [[ -s "${gh_api_workflows}" ]] || error_msg "(3.1) The api.github.com for workflows query failed."
+        https://api.github.com/repos/${repo}/actions/runs |
+        jq -c '.workflow_runs[] | select(.status != "in_progress") | {date: .updated_at, id: .id, name: .name}' \
+            >${all_workflows_list}
+    [[ -s "${all_workflows_list}" ]] || error_msg "(3.1) The api.github.com for workflows query failed."
     echo -e "${INFO} (3.1) The api.github.com for workflows request successfully."
-
-    # All lists in workflows
-    all_workflows_list="josn_all_workflows_list"
-    cat ${gh_api_workflows} | jq -c '.workflow_runs[] | select(.status != "in_progress") | {pub_date: .updated_at, id: .id, name: .name}' >${all_workflows_list}
-    if [[ -s "${all_workflows_list}" ]]; then
-        echo -e "${INFO} (3.2) The complete workflows list is generated successfully."
-        [[ "${out_log}" == "true" ]] && echo -e "${INFO} (3.2) Current workflows list:\n$(cat ${all_workflows_list})"
-    else
-        echo -e "${TIPS} (3.2) The workflows list is empty."
-    fi
+    [[ "${out_log}" == "true" ]] && echo -e "${INFO} (3.2) Current workflows list:\n$(cat ${all_workflows_list})"
 
     # The workflows containing keywords that need to be keep
     keep_keyword_workflows_list="josn_keep_keyword_workflows_list"
@@ -324,7 +308,7 @@ get_workflows_list() {
     # Sort and generate a keep list of workflows
     if [[ -s "${all_workflows_list}" && -n "${workflows_keep_day}" ]]; then
         today_second=$(date -d "$(date +"%Y%m%d")" +%s)
-        cat ${all_workflows_list} | jq -r '.pub_date' | awk -F'T' '{print $1}' | tr ' ' '\n' >${all_workflows_date_list}
+        cat ${all_workflows_list} | jq -r '.date' | awk -F'T' '{print $1}' | tr ' ' '\n' >${all_workflows_date_list}
         cat ${all_workflows_date_list} | while read line; do
             line_second="$(date -d "${line//-/}" +%s)"
             day_diff="$(((${today_second} - ${line_second}) / 86400))"
