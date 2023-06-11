@@ -206,9 +206,13 @@ get_releases_list() {
             jq -s '.[] | sort_by(.published_at)|reverse' |
             jq -c '.[] | {date: .published_at, id: .id, tag_name: .tag_name}' \
                 >${all_releases_list}
-        [[ "${?}" -eq "0" && -s "${all_releases_list}" ]] || error_msg "(1.1.1) The api.github.com for releases query failed."
-        echo -e "${INFO} (1.1.1) The api.github.com for releases request successfully."
-        [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.1.1) All releases list:\n$(cat ${all_releases_list})"
+
+        if [[ "${?}" -eq "0" && -s "${all_releases_list}" ]]; then
+            echo -e "${INFO} (1.1.1) The api.github.com for releases request successfully."
+            [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.1.1) All releases list:\n$(cat ${all_releases_list})"
+        else
+            echo -e "${TIPS} (1.1.1) The releases list is empty. skip."
+        fi
     else
         echo -e "${TIPS} (1.1.2) The releases list is empty. skip."
     fi
@@ -359,9 +363,13 @@ get_workflows_list() {
         echo "${all_results[*]}" |
             jq -c '.workflow_runs[] | select(.status != "in_progress") | {date: .updated_at, id: .id, name: .name}' \
                 >${all_workflows_list}
-        [[ "${?}" -eq "0" && -s "${all_workflows_list}" ]] || error_msg "(2.1.1) The api.github.com for workflows query failed."
-        echo -e "${INFO} (2.1.1) The api.github.com for workflows request successfully."
-        [[ "${out_log}" == "true" ]] && echo -e "${INFO} (2.1.1) All workflows runs list:\n$(cat ${all_workflows_list})"
+
+        if [[ "${?}" -eq "0" && -s "${all_workflows_list}" ]]; then
+            echo -e "${INFO} (2.1.1) The api.github.com for workflows request successfully."
+            [[ "${out_log}" == "true" ]] && echo -e "${INFO} (2.1.1) All workflows runs list:\n$(cat ${all_workflows_list})"
+        else
+            echo -e "${TIPS} (2.1.1) The workflows list is empty. skip."
+        fi
     else
         echo -e "${TIPS} (2.1.2) The workflows list is empty. skip."
     fi
