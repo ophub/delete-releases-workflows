@@ -40,6 +40,9 @@ You can use the following options to configure the deletion settings in the `del
 | repo                    | Optional<br />可选项   | Set the `<owner>/<repo>` of the repository where the action is executed, the default is `current repository`.<br />设置执行操作的 `<owner>/<repo>` ，默认为`当前仓库`。 |
 | gh_token                | `Required`<br />`必选项` | Set the [GH_TOKEN](https://github.com/ophub/amlogic-s9xxx-armbian/tree/main/build-armbian/documents#2-set-the-privacy-variable-github_token) token for executing the deletion operation.<br />设置执行删除操作的 [GH_TOKEN](https://github.com/ophub/amlogic-s9xxx-armbian/tree/main/build-armbian/documents#2-set-the-privacy-variable-github_token) 口令。 |
 
+- Each run can delete 1000 Releases and 1000 Workflows runs records. If there are more records, the deletion operation needs to be executed multiple times.
+- 每次运行可以删除 1000 个 Releases 和 1000 个 Workflows 运行记录，如有更多记录，需要多次运行删除操作。
+
 ## Links / 链接
 
 - [GitHub Docs](https://docs.github.com/en/rest/releases/releases?list-releases)
