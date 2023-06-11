@@ -218,10 +218,14 @@ get_releases_list() {
     done
 
     if [[ -s "${all_releases_list}" ]]; then
+        # Remove empty lines
+        sed -i '/^[[:space:]]*$/d' "${all_releases_list}"
+
+        # Print the result log
         echo -e "${INFO} (1.3.1) The api.github.com for releases request successfully."
         [[ "${out_log}" == "true" ]] && {
-            echo -e "${INFO} (1.3.2) Count of releases list: [ $(grep -vE "^\s*$" "${all_releases_list}" | wc -l) ]"
-            echo -e "${INFO} (1.3.3) All releases list: $(cat ${all_releases_list})"
+            echo -e "${INFO} (1.3.2) Count of releases list: [ $(cat ${all_releases_list} | wc -l) ]"
+            echo -e "${INFO} (1.3.3) All releases list:\n$(cat ${all_releases_list})"
         }
     else
         echo -e "${TIPS} (1.3.4) The releases list is empty. skip."
@@ -380,10 +384,14 @@ get_workflows_list() {
     done
 
     if [[ -s "${all_workflows_list}" ]]; then
+        # Remove empty lines
+        sed -i '/^[[:space:]]*$/d' "${all_workflows_list}"
+
+        # Print the result log
         echo -e "${INFO} (2.3.1) The api.github.com for workflows request successfully."
         [[ "${out_log}" == "true" ]] && {
-            echo -e "${INFO} (2.3.2) Count of workflow runs: [ $(grep -vE "^\s*$" "${all_workflows_list}" | wc -l) ]"
-            echo -e "${INFO} (2.3.3) All workflows runs list: $(cat ${all_workflows_list})"
+            echo -e "${INFO} (2.3.2) Count of workflow runs: [ $(cat ${all_workflows_list} | wc -l) ]"
+            echo -e "${INFO} (2.3.3) All workflows runs list:\n$(cat ${all_workflows_list})"
         }
     else
         echo -e "${TIPS} (2.3.4) The workflows list is empty. skip."
