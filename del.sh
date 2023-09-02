@@ -26,6 +26,7 @@
 # Set default value
 delete_releases="false"
 delete_tags="false"
+prerelease_option="all"
 releases_keep_latest="90"
 releases_keep_keyword=()
 delete_workflows="false"
@@ -59,7 +60,7 @@ init_var() {
     sudo apt-get -qq update && sudo apt-get -qq install -y jq curl
 
     # If it is followed by [ : ], it means that the option requires a parameter value
-    get_all_ver="$(getopt "r:p:t:l:w:s:d:k:o:g:" "${@}")"
+    get_all_ver="$(getopt "r:a:t:p:l:w:s:d:k:o:g:" "${@}")"
 
     while [[ -n "${1}" ]]; do
         case "${1}" in
@@ -71,12 +72,12 @@ init_var() {
                 error_msg "Invalid -r parameter [ ${2} ]!"
             fi
             ;;
-        -p | --delete_releases)
+        -a | --delete_releases)
             if [[ -n "${2}" ]]; then
                 delete_releases="${2}"
                 shift
             else
-                error_msg "Invalid -p parameter [ ${2} ]!"
+                error_msg "Invalid -a parameter [ ${2} ]!"
             fi
             ;;
         -t | --delete_tags)
@@ -85,6 +86,14 @@ init_var() {
                 shift
             else
                 error_msg "Invalid -t parameter [ ${2} ]!"
+            fi
+            ;;
+        -p | --prerelease_option)
+            if [[ -n "${2}" ]]; then
+                prerelease_option="${2}"
+                shift
+            else
+                error_msg "Invalid -p parameter [ ${2} ]!"
             fi
             ;;
         -l | --releases_keep_latest)
@@ -159,6 +168,7 @@ init_var() {
     echo -e "${INFO} repo: [ ${repo} ]"
     echo -e "${INFO} delete_releases: [ ${delete_releases} ]"
     echo -e "${INFO} delete_tags: [ ${delete_tags} ]"
+    echo -e "${INFO} prerelease_option: [ ${prerelease_option} ]"
     echo -e "${INFO} releases_keep_latest: [ ${releases_keep_latest} ]"
     echo -e "${INFO} releases_keep_keyword: [ $(echo ${releases_keep_keyword[*]} | xargs) ]"
     echo -e "${INFO} delete_workflows: [ ${delete_workflows} ]"
@@ -199,7 +209,7 @@ get_releases_list() {
             # Sort the results
             echo "${response}" |
                 jq -s '.[] | sort_by(.published_at)|reverse' |
-                jq -c '.[] | {date: .published_at, id: .id, tag_name: .tag_name}' \
+                jq -c '.[] | {date: .published_at, id: .id, prerelease: .prerelease, tag_name: .tag_name}' \
                     >>${all_releases_list}
         fi
 
@@ -235,55 +245,73 @@ get_releases_list() {
 out_releases_list() {
     echo -e "${STEPS} Start outputting the releases list..."
 
+    if [[ -s "${all_releases_list}" ]]; then
+        # Filter based on the prerelease option(all/false/true)
+        if [[ "${prerelease_option}" == "all" ]]; then
+            echo -e "${TIPS} (1.4.1) Do not filter the prerelease option. skip."
+        elif [[ "${prerelease_option}" == "false" ]]; then
+            echo -e "${INFO} (1.4.2) Filter the prerelease option: [ false ]"
+            cat ${all_releases_list} | jq -r '.prerelease' | grep -w "true" | while read line; do sed -i "/${line}/d" ${all_releases_list}; done
+        elif [[ "${prerelease_option}" == "true" ]]; then
+            echo -e "${INFO} (1.4.3) Filter the prerelease option: [ true ]"
+            cat ${all_releases_list} | jq -r '.prerelease' | grep -w "false" | while read line; do sed -i "/${line}/d" ${all_releases_list}; done
+        else
+            error_msg "Invalid prerelease option [ ${prerelease_option} ]!"
+        fi
+        [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.4.4) Current releases list:\n$(cat ${all_releases_list})"
+    else
+        echo -e "${TIPS} (1.4.5) The releases list is empty. skip."
+    fi
+
     # Match tags that need to be filtered
     keep_releases_keyword_list="josn_keep_releases_keyword_list"
     if [[ "${#releases_keep_keyword[*]}" -ge "1" && -s "${all_releases_list}" ]]; then
         # Match tags that meet the criteria
-        echo -e "${INFO} (1.4.1) Filter tags keywords: [ $(echo ${releases_keep_keyword[*]} | xargs) ]"
+        echo -e "${INFO} (1.5.1) Filter tags keywords: [ $(echo ${releases_keep_keyword[*]} | xargs) ]"
         for ((i = 0; i < ${#releases_keep_keyword[*]}; i++)); do
             cat ${all_releases_list} | jq -r .tag_name | grep -E "${releases_keep_keyword[$i]}" >>${keep_releases_keyword_list}
         done
         [[ "${out_log}" == "true" && -s "${keep_releases_keyword_list}" ]] && {
-            echo -e "${INFO} (1.4.2) List of tags that meet the criteria:\n$(cat ${keep_releases_keyword_list})"
+            echo -e "${INFO} (1.5.2) List of tags that meet the criteria:\n$(cat ${keep_releases_keyword_list})"
         }
 
         # Remove the tags that need to be kept
         [[ -s "${keep_releases_keyword_list}" ]] && {
             cat ${keep_releases_keyword_list} | while read line; do sed -i "/${line}/d" ${all_releases_list}; done
-            echo -e "${INFO} (1.4.3) The tags keywords filtering successfully."
+            echo -e "${INFO} (1.5.3) The tags keywords filtering successfully."
         }
 
         # List of remaining tags after filtering.
-        [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.4.4) Current releases list:\n$(cat ${all_releases_list})"
+        [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.5.4) Current releases list:\n$(cat ${all_releases_list})"
     else
-        echo -e "${TIPS} (1.4.5) The filter keyword is empty. skip."
+        echo -e "${TIPS} (1.5.5) The filter keyword is empty. skip."
     fi
 
     # Match the latest tags that need to be kept
     keep_releases_list="josn_keep_releases_list"
     if [[ -s "${all_releases_list}" ]]; then
         if [[ "${releases_keep_latest}" -eq "0" ]]; then
-            echo -e "${INFO} (1.5.1) Delete all releases."
+            echo -e "${INFO} (1.6.1) Delete all releases."
         else
             # Generate a list of tags that need to be kept
             cat ${all_releases_list} | head -n ${releases_keep_latest} >${keep_releases_list}
-            echo -e "${INFO} (1.5.2) The keep tags list is generated successfully."
+            echo -e "${INFO} (1.6.2) The keep tags list is generated successfully."
             [[ "${out_log}" == "true" && -s "${keep_releases_list}" ]] && {
-                echo -e "${INFO} (1.5.3) The keep tags list:\n$(cat ${keep_releases_list})"
+                echo -e "${INFO} (1.6.3) The keep tags list:\n$(cat ${keep_releases_list})"
             }
 
             # Remove releases that need to be kept from the full list
             sed -i "1,${releases_keep_latest}d" ${all_releases_list}
         fi
     else
-        echo -e "${TIPS} (1.5.4) The releases list is empty. skip."
+        echo -e "${TIPS} (1.6.4) The releases list is empty. skip."
     fi
 
     # Delete list
     if [[ -s "${all_releases_list}" ]]; then
-        [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.5.5) Delete releases list:\n$(cat ${all_releases_list})"
+        [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.6.5) Delete releases list:\n$(cat ${all_releases_list})"
     else
-        echo -e "${TIPS} (1.5.6) The delete releases list is empty. skip."
+        echo -e "${TIPS} (1.6.6) The delete releases list is empty. skip."
     fi
 
     echo -e ""
@@ -304,9 +332,9 @@ del_releases_file() {
                     https://api.github.com/repos/${repo}/releases/${release_id}
             }
         done
-        echo -e "${SUCCESS} (1.6.1) Releases deleted successfully."
+        echo -e "${SUCCESS} (1.7.1) Releases deleted successfully."
     else
-        echo -e "${TIPS} (1.6.2) No releases need to be deleted. skip."
+        echo -e "${TIPS} (1.7.2) No releases need to be deleted. skip."
     fi
 
     echo -e ""
@@ -327,9 +355,9 @@ del_releases_tags() {
                     https://api.github.com/repos/${repo}/git/refs/tags/${tag_name}
             }
         done
-        echo -e "${SUCCESS} (1.7.1) Tags deleted successfully."
+        echo -e "${SUCCESS} (1.8.1) Tags deleted successfully."
     else
-        echo -e "${TIPS} (1.7.2) No tags need to be deleted. skip."
+        echo -e "${TIPS} (1.8.2) No tags need to be deleted. skip."
     fi
 
     echo -e ""

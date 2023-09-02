@@ -30,6 +30,7 @@ You can configure the deletion settings in the delete.yml file with the followin
 | Key / 选项               | Required   | Description / 说明                       |
 | ----------------------- | ---------- | ---------------------------------------- |
 | delete_releases         | `Required`<br />`必选项` | Set whether to delete releases files (options: `true`/`false`). The default is `false`.<br />设置是否删除 releases 文件（选项：`true`/`false`），默认为 `false`。 |
+| prerelease_option       | Optional<br />可选项 | Set whether to differentiate pre-release versions (options: `all`/`true`/`false`). `all` indicates all types, `true`/`false` represent only deleting releases files marked with this type. The default is `all`.<br />设置是否区分预发行版本（选项：`all`/`true`/`false`）。`all`表示全部类型，`true`/`false`代表仅删除标记为此类型的 releases 文件。默认为 `all`。 |
 | releases_keep_latest    | Optional<br />可选项 | Set how many of the latest Releases versions to keep (`integer`, such as: 5). Setting to `0` means delete all, and the default is to keep `90`.<br />设置保留几个最新的 Releases 版本（`整数`。如：5），设置为 `0` 表示全部删除，默认保留 `90` 个。 |
 | releases_keep_keyword   | Optional<br />可选项   | Set the `keywords` of the Releases' tags to be preserved. Multiple keywords are separated by `/` (for example: `book/tool`). The default value is `none`.<br />设置需要保留的 Releases 的 tags `关键字`，多个关键字使用 `/` 分割（例如：`book/tool`），默认值 `无`。 |
 | delete_tags             | Optional<br />可选项   | Set whether to delete the tags associated with Releases (options: `true`/`false`). The default is `false`.<br />设置是否删除与 Releases 关联的 tags（选项：`true`/`false`），默认为 `false`。 |
