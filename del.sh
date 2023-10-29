@@ -170,10 +170,10 @@ init_var() {
     echo -e "${INFO} delete_tags: [ ${delete_tags} ]"
     echo -e "${INFO} prerelease_option: [ ${prerelease_option} ]"
     echo -e "${INFO} releases_keep_latest: [ ${releases_keep_latest} ]"
-    echo -e "${INFO} releases_keep_keyword: [ $(echo ${releases_keep_keyword[*]} | xargs) ]"
+    echo -e "${INFO} releases_keep_keyword: [ $(echo ${releases_keep_keyword[@]} | xargs) ]"
     echo -e "${INFO} delete_workflows: [ ${delete_workflows} ]"
     echo -e "${INFO} workflows_keep_day: [ ${workflows_keep_day} ]"
-    echo -e "${INFO} workflows_keep_keyword: [ $(echo ${workflows_keep_keyword[*]} | xargs) ]"
+    echo -e "${INFO} workflows_keep_keyword: [ $(echo ${workflows_keep_keyword[@]} | xargs) ]"
     echo -e "${INFO} out_log: [ ${out_log} ]"
     echo -e ""
 }
@@ -265,10 +265,10 @@ out_releases_list() {
 
     # Match tags that need to be filtered
     keep_releases_keyword_list="josn_keep_releases_keyword_list"
-    if [[ "${#releases_keep_keyword[*]}" -ge "1" && -s "${all_releases_list}" ]]; then
+    if [[ "${#releases_keep_keyword[@]}" -ge "1" && -s "${all_releases_list}" ]]; then
         # Match tags that meet the criteria
-        echo -e "${INFO} (1.5.1) Filter tags keywords: [ $(echo ${releases_keep_keyword[*]} | xargs) ]"
-        for ((i = 0; i < ${#releases_keep_keyword[*]}; i++)); do
+        echo -e "${INFO} (1.5.1) Filter tags keywords: [ $(echo ${releases_keep_keyword[@]} | xargs) ]"
+        for ((i = 0; i < ${#releases_keep_keyword[@]}; i++)); do
             cat ${all_releases_list} | jq -r .tag_name | grep -E "${releases_keep_keyword[$i]}" >>${keep_releases_keyword_list}
         done
         [[ "${out_log}" == "true" && -s "${keep_releases_keyword_list}" ]] && {
@@ -432,10 +432,10 @@ out_workflows_list() {
     # The workflows containing keywords that need to be keep
     keep_keyword_workflows_list="josn_keep_keyword_workflows_list"
     # Remove workflows that match keywords and need to be kept
-    if [[ "${#workflows_keep_keyword[*]}" -ge "1" && -s "${all_workflows_list}" ]]; then
+    if [[ "${#workflows_keep_keyword[@]}" -ge "1" && -s "${all_workflows_list}" ]]; then
         # Match the list of workflows that meet the keywords
-        echo -e "${INFO} (2.4.1) Filter Workflows runs keywords: [ $(echo ${workflows_keep_keyword[*]} | xargs) ]"
-        for ((i = 0; i < ${#workflows_keep_keyword[*]}; i++)); do
+        echo -e "${INFO} (2.4.1) Filter Workflows runs keywords: [ $(echo ${workflows_keep_keyword[@]} | xargs) ]"
+        for ((i = 0; i < ${#workflows_keep_keyword[@]}; i++)); do
             cat ${all_workflows_list} | jq -r .name | grep -E "${workflows_keep_keyword[$i]}" >>${keep_keyword_workflows_list}
         done
         [[ "${out_log}" == "true" && -s "${keep_keyword_workflows_list}" ]] && {
