@@ -42,7 +42,7 @@ github_max_page="100"
 # Set font color
 STEPS="[\033[95m STEPS \033[0m]"
 INFO="[\033[94m INFO \033[0m]"
-TIPS="[\033[93m TIPS \033[0m]"
+PROMPT="[\033[93m PROMPT \033[0m]"
 ERROR="[\033[91m ERROR \033[0m]"
 SUCCESS="[\033[92m SUCCESS \033[0m]"
 #
@@ -220,7 +220,7 @@ get_releases_list() {
 
         # Check if the current page is greater than the maximum page
         if [[ "${github_page}" -ge "${github_max_page}" ]]; then
-            echo -e "${TIPS} (1.2.1) Reach the maximum page number (${github_max_page}) in the query. skip."
+            echo -e "${PROMPT} (1.2.1) Reach the maximum page number (${github_max_page}) in the query. skip."
             break
         else
             github_page="$((github_page + 1))"
@@ -238,7 +238,7 @@ get_releases_list() {
             echo -e "${INFO} (1.3.3) All releases list:\n$(cat ${all_releases_list})"
         }
     else
-        echo -e "${TIPS} (1.3.4) The releases list is empty. skip."
+        echo -e "${PROMPT} (1.3.4) The releases list is empty. skip."
     fi
 }
 
@@ -248,7 +248,7 @@ out_releases_list() {
     if [[ -s "${all_releases_list}" ]]; then
         # Filter based on the prerelease option(all/false/true)
         if [[ "${prerelease_option}" == "all" ]]; then
-            echo -e "${TIPS} (1.4.1) Do not filter the prerelease option. skip."
+            echo -e "${PROMPT} (1.4.1) Do not filter the prerelease option. skip."
         elif [[ "${prerelease_option}" == "false" ]]; then
             echo -e "${INFO} (1.4.2) Filter the prerelease option: [ false ]"
             cat ${all_releases_list} | jq -r '.prerelease' | grep -w "true" | while read line; do sed -i "/${line}/d" ${all_releases_list}; done
@@ -260,7 +260,7 @@ out_releases_list() {
         fi
         [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.4.4) Current releases list:\n$(cat ${all_releases_list})"
     else
-        echo -e "${TIPS} (1.4.5) The releases list is empty. skip."
+        echo -e "${PROMPT} (1.4.5) The releases list is empty. skip."
     fi
 
     # Match tags that need to be filtered
@@ -284,7 +284,7 @@ out_releases_list() {
         # List of remaining tags after filtering.
         [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.5.4) Current releases list:\n$(cat ${all_releases_list})"
     else
-        echo -e "${TIPS} (1.5.5) The filter keyword is empty. skip."
+        echo -e "${PROMPT} (1.5.5) The filter keyword is empty. skip."
     fi
 
     # Match the latest tags that need to be kept
@@ -304,14 +304,14 @@ out_releases_list() {
             sed -i "1,${releases_keep_latest}d" ${all_releases_list}
         fi
     else
-        echo -e "${TIPS} (1.6.4) The releases list is empty. skip."
+        echo -e "${PROMPT} (1.6.4) The releases list is empty. skip."
     fi
 
     # Delete list
     if [[ -s "${all_releases_list}" ]]; then
         [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.6.5) Delete releases list:\n$(cat ${all_releases_list})"
     else
-        echo -e "${TIPS} (1.6.6) The delete releases list is empty. skip."
+        echo -e "${PROMPT} (1.6.6) The delete releases list is empty. skip."
     fi
 
     echo -e ""
@@ -334,7 +334,7 @@ del_releases_file() {
         done
         echo -e "${SUCCESS} (1.7.1) Releases deleted successfully."
     else
-        echo -e "${TIPS} (1.7.2) No releases need to be deleted. skip."
+        echo -e "${PROMPT} (1.7.2) No releases need to be deleted. skip."
     fi
 
     echo -e ""
@@ -357,7 +357,7 @@ del_releases_tags() {
         done
         echo -e "${SUCCESS} (1.8.1) Tags deleted successfully."
     else
-        echo -e "${TIPS} (1.8.2) No tags need to be deleted. skip."
+        echo -e "${PROMPT} (1.8.2) No tags need to be deleted. skip."
     fi
 
     echo -e ""
@@ -404,7 +404,7 @@ get_workflows_list() {
 
         # Check if the current page is greater than the maximum page
         if [[ "${github_page}" -ge "${github_max_page}" ]]; then
-            echo -e "${TIPS} (2.2.1) Reach the maximum page number (${github_max_page}) in the query. skip."
+            echo -e "${PROMPT} (2.2.1) Reach the maximum page number (${github_max_page}) in the query. skip."
             break
         else
             github_page="$((github_page + 1))"
@@ -422,7 +422,7 @@ get_workflows_list() {
             echo -e "${INFO} (2.3.3) All workflows runs list:\n$(cat ${all_workflows_list})"
         }
     else
-        echo -e "${TIPS} (2.3.4) The workflows list is empty. skip."
+        echo -e "${PROMPT} (2.3.4) The workflows list is empty. skip."
     fi
 }
 
@@ -451,7 +451,7 @@ out_workflows_list() {
         # List of remaining workflows after filtering by keywords
         [[ "${out_log}" == "true" ]] && echo -e "${INFO} (2.4.4) Current workflows runs list:\n$(cat ${all_workflows_list})"
     else
-        echo -e "${TIPS} (2.4.5) The filter keyword is empty. skip."
+        echo -e "${PROMPT} (2.4.5) The filter keyword is empty. skip."
     fi
 
     # Generate a date list of workflows
@@ -485,14 +485,14 @@ out_workflows_list() {
             }
         fi
     else
-        echo -e "${TIPS} (2.5.4) The workflows runs list is empty. skip."
+        echo -e "${PROMPT} (2.5.4) The workflows runs list is empty. skip."
     fi
 
     # Delete list
     if [[ -s "${all_workflows_list}" ]]; then
         [[ "${out_log}" == "true" ]] && echo -e "${INFO} (2.5.5) Delete workflows list:\n$(cat ${all_workflows_list})"
     else
-        echo -e "${TIPS} (2.5.6) The delete workflows list is empty. skip."
+        echo -e "${PROMPT} (2.5.6) The delete workflows list is empty. skip."
     fi
 
     echo -e ""
@@ -515,7 +515,7 @@ del_workflows_runs() {
         done
         echo -e "${SUCCESS} (2.6.1) Workflows runs deleted successfully."
     else
-        echo -e "${TIPS} (2.6.2) No Workflows runs need to be deleted. skip."
+        echo -e "${PROMPT} (2.6.2) No Workflows runs need to be deleted. skip."
     fi
 
     echo -e ""
