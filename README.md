@@ -18,7 +18,7 @@ You can use this Actions by introducing it in the `.github/workflows/*.yml` work
     releases_keep_latest: 5
     del_workflows: true
     workflows_keep_day: 10
-    gh_token: ${{ secrets.GH_TOKEN }}
+    gh_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ## Setting instructions / 设置说明
@@ -39,7 +39,7 @@ You can configure the deletion settings in the delete.yml file with the followin
 | workflows_keep_keyword  | Optional<br />可选项   | Set the `keywords` for the names of the workflow run logs to be kept. Multiple keywords are separated by `/` (for example: `book/tool`). The default value is `none`.<br />设置需要保留的 workflows 运行记录的名称`关键字`，多个关键字使用 `/` 分割（例如：`book/tool`），默认值 `无`。 |
 | out_log                 | Optional<br />可选项   | Set whether to output detailed json logs (options: `true`/`false`). The default value is `false`.<br />设置是否输出详细的 json 日志（选项：`true`/`false`），默认值 `false`。 |
 | repo                    | Optional<br />可选项   | Set the `<owner>/<repo>` for the execution operation, the default is the `current repository`.<br />设置执行操作的 `<owner>/<repo>` ，默认为`当前仓库`。 |
-| gh_token                | `Required`<br />`必选项` | Set the [GH_TOKEN](https://github.com/ophub/amlogic-s9xxx-openwrt/blob/main/documents/README.md#2-set-privacy-variable-github_token) password for executing the delete operation.<br />设置执行删除操作的 [GH_TOKEN](https://github.com/ophub/amlogic-s9xxx-openwrt/blob/main/documents/README.cn.md#2-设置隐私变量-github_token) 口令。 |
+| gh_token                | `Required`<br />`必选项` | Set the [GITHUB_TOKEN](https://docs.github.com/en/actions/security-guides/automatic-token-authentication) password for executing the delete operation.<br />设置执行删除操作的 [GITHUB_TOKEN](https://docs.github.com/zh/actions/security-guides/automatic-token-authentication#about-the-github_token-secret) 口令。 |
 
 - Each run can delete up to 1000 Releases and 1000 Workflow run logs. If there are more records, the delete operation needs to be run multiple times.
 - 每次运行可以删除 1000 个 Releases 和 1000 个 Workflows 运行记录，如有更多记录，需要多次运行删除操作。
