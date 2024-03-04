@@ -6,9 +6,9 @@ This Actions can delete specified repository's Releases and Workflow run logs.
 
 ## Instructions / 使用说明
 
-You can use this Actions by introducing it in the `.github/workflows/*.yml` workflow script, such as in [delete.yml](https://raw.githubusercontent.com/ophub/delete-releases-workflows/main/.github/workflows/delete.yml).
+You can use this Actions by introducing it in the `.github/workflows/*.yml` workflow script, such as in [delete.yml](https://github.com/ophub/amlogic-s9xxx-armbian/blob/main/.github/workflows/delete-older-releases-workflows.yml).
 
-在 `.github/workflows/*.yml` 工作流脚本中引入此 Actions 即可使用，例如 [delete.yml](https://raw.githubusercontent.com/ophub/delete-releases-workflows/main/.github/workflows/delete.yml)。
+在 `.github/workflows/*.yml` 工作流脚本中引入此 Actions 即可使用，例如 [delete.yml](https://github.com/ophub/amlogic-s9xxx-armbian/blob/main/.github/workflows/delete-older-releases-workflows.yml)。
 
 ```yaml
 - name: Delete releases and workflows runs
