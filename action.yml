@@ -50,7 +50,7 @@ runs:
   steps:
     - shell: bash
       run: |
-        cd ${GITHUB_ACTION_PATH}
+        cd ${{ github.action_path }}
         echo -e "Current Actions path: ${PWD}"
         echo -e "Current workflow run_id: ${GITHUB_RUN_ID}"
 
