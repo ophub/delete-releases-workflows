@@ -60,14 +60,17 @@ init_var() {
     sudo apt-get -qq update && sudo apt-get -qq install -y jq curl
 
     # If it is followed by [ : ], it means that the option requires a parameter value
-    get_all_ver="$(getopt "r:a:t:p:l:w:s:d:k:o:g:" "${@}")"
+    local options="r:a:t:p:l:w:s:d:k:o:g:"
+    parsed_args=$(getopt -o "${options}" -- "${@}")
+    [[ ${?} -ne 0 ]] && error_msg "Parameter parsing failed."
+    eval set -- "${parsed_args}"
 
-    while [[ -n "${1}" ]]; do
+    while true; do
         case "${1}" in
         -r | --repo)
             if [[ -n "${2}" ]]; then
                 repo="${2}"
-                shift
+                shift 2
             else
                 error_msg "Invalid -r parameter [ ${2} ]!"
             fi
@@ -75,7 +78,7 @@ init_var() {
         -a | --delete_releases)
             if [[ -n "${2}" ]]; then
                 delete_releases="${2}"
-                shift
+                shift 2
             else
                 error_msg "Invalid -a parameter [ ${2} ]!"
             fi
@@ -83,7 +86,7 @@ init_var() {
         -t | --delete_tags)
             if [[ -n "${2}" ]]; then
                 delete_tags="${2}"
-                shift
+                shift 2
             else
                 error_msg "Invalid -t parameter [ ${2} ]!"
             fi
@@ -91,7 +94,7 @@ init_var() {
         -p | --prerelease_option)
             if [[ -n "${2}" ]]; then
                 prerelease_option="${2}"
-                shift
+                shift 2
             else
                 error_msg "Invalid -p parameter [ ${2} ]!"
             fi
@@ -99,7 +102,7 @@ init_var() {
         -l | --releases_keep_latest)
             if [[ -n "${2}" ]]; then
                 releases_keep_latest="${2}"
-                shift
+                shift 2
             else
                 error_msg "Invalid -l parameter [ ${2} ]!"
             fi
@@ -110,7 +113,7 @@ init_var() {
                 IFS="/"
                 releases_keep_keyword=(${2})
                 IFS="${oldIFS}"
-                shift
+                shift 2
             else
                 error_msg "Invalid -w parameter [ ${2} ]!"
             fi
@@ -118,7 +121,7 @@ init_var() {
         -s | --delete_workflows)
             if [[ -n "${2}" ]]; then
                 delete_workflows="${2}"
-                shift
+                shift 2
             else
                 error_msg "Invalid -s parameter [ ${2} ]!"
             fi
@@ -126,7 +129,7 @@ init_var() {
         -d | --workflows_keep_day)
             if [[ -n "${2}" ]]; then
                 workflows_keep_day="${2}"
-                shift
+                shift 2
             else
                 error_msg "Invalid -d parameter [ ${2} ]!"
             fi
@@ -137,7 +140,7 @@ init_var() {
                 IFS="/"
                 workflows_keep_keyword=(${2})
                 IFS="${oldIFS}"
-                shift
+                shift 2
             else
                 error_msg "Invalid -k parameter [ ${2} ]!"
             fi
@@ -145,7 +148,7 @@ init_var() {
         -o | --out_log)
             if [[ -n "${2}" ]]; then
                 out_log="${2}"
-                shift
+                shift 2
             else
                 error_msg "Invalid -o parameter [ ${2} ]!"
             fi
@@ -153,16 +156,20 @@ init_var() {
         -g | --gh_token)
             if [[ -n "${2}" ]]; then
                 gh_token="${2}"
-                shift
+                shift 2
             else
                 error_msg "Invalid -g parameter [ ${2} ]!"
             fi
             ;;
+        --)
+            shift
+            break
+            ;;
         *)
-            error_msg "Invalid option [ ${1} ]!"
+            [[ -n "${1}" ]] && error_msg "Invalid option [ ${1} ]!"
+            break
             ;;
         esac
-        shift
     done
 
     echo -e "${INFO} repo: [ ${repo} ]"
