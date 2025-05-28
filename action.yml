@@ -72,7 +72,7 @@ runs:
         # Verify integer function
         validate_integer() {
             local var="${1}" param_name="${2}"
-            if [[ ! "${var}" =~ ^[1-9][0-9]*$ ]]; then
+            if [[ ! "${var}" =~ ^(0|[1-9][0-9]*)$ ]]; then
                 error_msg "Invalid value for $param_name: ${var} must be a positive integer"
             fi
         }
