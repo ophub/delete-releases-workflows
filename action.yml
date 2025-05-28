@@ -5,6 +5,7 @@ inputs:
   repo:
     description: "Repo name in the form of <owner>/<repo>"
     required: false
+    default: "${{ github.repository }}"
   delete_releases:
     description: "Whether to delete releases records"
     required: true
@@ -44,48 +45,113 @@ inputs:
   gh_token:
     description: "Set the token"
     required: true
+    default: ""
 
 runs:
   using: "composite"
   steps:
     - shell: bash
       run: |
+        #======================================= Define common functions =======================================
+        #
+        # Error color
+        ERROR="[\033[91m ERROR \033[0m]"
+        error_msg() {
+            echo -e "${ERROR} ${1}"
+            exit 1
+        }
+        #
+        # Validation Boolean type function
+        validate_boolean() {
+            local var="${1}" param_name="${2}"
+            if [[ ! "${var}" =~ ^(true|false)$ ]]; then
+                error_msg "Invalid value for $param_name: ${var} must be 'true' or 'false'"
+            fi
+        }
+        #
+        # Verify integer function
+        validate_integer() {
+            local var="${1}" param_name="${2}"
+            if [[ ! "${var}" =~ ^[1-9][0-9]*$ ]]; then
+                error_msg "Invalid value for $param_name: ${var} must be a positive integer"
+            fi
+        }
+        #
+        # Verify pre-release options function
+        validate_prerelease() {
+            local var="${1}" param_name="${2}"
+            if [[ ! "${var}" =~ ^(true|false|all)$ ]]; then
+                error_msg "Invalid value for $param_name: ${var} must be 'true', 'false', or 'all'."
+            fi
+        }
+        #
+        #====================================== Validate input parameters ======================================
+        #
+        # Print the current action path and workflow run ID
         cd ${{ github.action_path }}
         echo -e "Current Actions path: ${PWD}"
         echo -e "Current workflow run_id: ${GITHUB_RUN_ID}"
 
-        gh_token="${{ inputs.gh_token }}"
-        [[ -z "${gh_token}" ]] && echo -e "Please set the token: [ gh_token ]." && exit 1
-        repo="${{ inputs.repo }}"
-        [[ -z "${repo}" ]] && repo="${GITHUB_REPOSITORY}"
-        out_log="${{ inputs.out_log }}"
-
+        # Receive input parameters related to releases
         delete_releases="${{ inputs.delete_releases }}"
-        [[ -z "${delete_releases}" ]] && echo -e "Please set whether to delete releases." && exit 1
-        delete_tags="${{ inputs.delete_tags }}"
         prerelease_option="${{ inputs.prerelease_option }}"
         releases_keep_latest="${{ inputs.releases_keep_latest }}"
         releases_keep_keyword="${{ inputs.releases_keep_keyword }}"
-
+        delete_tags="${{ inputs.delete_tags }}"
+        #
+        # Receive input parameters related to workflows
         delete_workflows="${{ inputs.delete_workflows }}"
-        [[ -z "${delete_workflows}" ]] && echo -e "Please set whether to delete workflows." && exit 1
         workflows_keep_day="${{ inputs.workflows_keep_day }}"
         workflows_keep_keyword="${{ inputs.workflows_keep_keyword }}"
+        #
+        # Receive input parameters related to system environment
+        out_log="${{ inputs.out_log }}"
+        repo="${{ inputs.repo }}"
+        gh_token="${{ inputs.gh_token }}"
 
+        # Verify releases parameters
+        [[ -z "${delete_releases}" ]] && error_msg "Please set whether to delete releases."
+        [[ -n "${delete_releases}" ]] && validate_boolean "${delete_releases}" "delete_releases"
+        [[ -n "${prerelease_option}" ]] && validate_prerelease "${prerelease_option}" "prerelease_option"
+        [[ -n "${releases_keep_latest}" ]] && validate_integer "${releases_keep_latest}" "releases_keep_latest"
+        [[ -n "${delete_tags}" ]] && validate_boolean "${delete_tags}" "delete_tags"
+        #
+        # Verify workflows parameters
+        [[ -z "${delete_workflows}" ]] && error_msg "Please set whether to delete workflows."
+        [[ -n "${delete_workflows}" ]] && validate_boolean "${delete_workflows}" "delete_workflows"
+        [[ -n "${workflows_keep_day}" ]] && validate_integer "${workflows_keep_day}" "workflows_keep_day"
+        #
+        # Validate system environment parameters
+        [[ -n "${out_log}" ]] && validate_boolean "${out_log}" "out_log"
+        [[ -z "${gh_token}" ]] && error_msg "Please set the token: [ gh_token ]."
+        #
+        #===================================== Build command line arguments =====================================
+        #
+        # Initialize command line arguments
         make_command=""
-        [[ -n "${repo}" ]] && make_command="${make_command} -r ${repo}"
+        #
+        # Build command line arguments for releases
         [[ -n "${delete_releases}" ]] && make_command="${make_command} -a ${delete_releases}"
-        [[ -n "${delete_tags}" ]] && make_command="${make_command} -t ${delete_tags}"
         [[ -n "${prerelease_option}" ]] && make_command="${make_command} -p ${prerelease_option}"
         [[ -n "${releases_keep_latest}" ]] && make_command="${make_command} -l ${releases_keep_latest}"
         [[ -n "${releases_keep_keyword}" ]] && make_command="${make_command} -w ${releases_keep_keyword}"
+        [[ -n "${delete_tags}" ]] && make_command="${make_command} -t ${delete_tags}"
+        #
+        # Build command line arguments for workflows
         [[ -n "${delete_workflows}" ]] && make_command="${make_command} -s ${delete_workflows}"
         [[ -n "${workflows_keep_day}" ]] && make_command="${make_command} -d ${workflows_keep_day}"
         [[ -n "${workflows_keep_keyword}" ]] && make_command="${make_command} -k ${workflows_keep_keyword}"
+        #
+        # Build command line arguments for system environment
         [[ -n "${out_log}" ]] && make_command="${make_command} -o ${out_log}"
+        [[ -n "${repo}" ]] && make_command="${make_command} -r ${repo}"
         [[ -n "${gh_token}" ]] && make_command="${make_command} -g ${gh_token}"
+        #
+        # Execute the deletion script
         chmod +x del.sh
         ./del.sh ${make_command}
+        #
+        #=========================================== End of script =============================================
 
 branding:
   icon: "terminal"
