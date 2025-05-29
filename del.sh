@@ -380,7 +380,7 @@ get_workflows_list() {
     all_workflows_list="josn_api_workflows"
     echo "" >${all_workflows_list}
 
-    # Get the release list
+    # Get the workflows list
     while true; do
         response="$(
             curl -s -L \
@@ -400,7 +400,7 @@ get_workflows_list() {
 
             # Sort the results
             echo "${response}" |
-                jq -c '.workflow_runs[] | select(.status != "in_progress") | {date: .updated_at, id: .id, name: .name}' \
+                jq -c '.workflow_runs[] | select(.status == "completed") | {date: .updated_at, id: .id, name: .name}' \
                     >>${all_workflows_list}
         fi
 
