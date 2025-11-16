@@ -240,7 +240,7 @@ get_releases_list() {
 
         # Print the result log
         echo -e "${INFO} (1.3.1) The api.github.com for releases request successfully."
-        [[ "${out_log}" == "true" ]] && {
+        [[ "${out_log}" =~ ^(true|yes)$ ]] && {
             echo -e "${INFO} (1.3.2) Count of releases list: [ $(cat ${all_releases_list} | wc -l) ]"
             echo -e "${INFO} (1.3.3) All releases list:\n$(cat ${all_releases_list})"
         }
@@ -256,16 +256,16 @@ out_releases_list() {
         # Filter based on the prerelease option(all/false/true)
         if [[ "${prerelease_option}" == "all" ]]; then
             echo -e "${NOTE} (1.4.1) Do not filter the prerelease option. skip."
-        elif [[ "${prerelease_option}" == "false" ]]; then
+        elif [[ "${prerelease_option}" =~ ^(false|no)$ ]]; then
             echo -e "${INFO} (1.4.2) Filter the prerelease option: [ false ]"
             cat ${all_releases_list} | jq -r '.prerelease' | grep -w "true" | while read line; do sed -i "/${line}/d" ${all_releases_list}; done
-        elif [[ "${prerelease_option}" == "true" ]]; then
+        elif [[ "${prerelease_option}" =~ ^(true|yes)$ ]]; then
             echo -e "${INFO} (1.4.3) Filter the prerelease option: [ true ]"
             cat ${all_releases_list} | jq -r '.prerelease' | grep -w "false" | while read line; do sed -i "/${line}/d" ${all_releases_list}; done
         else
             error_msg "Invalid prerelease option [ ${prerelease_option} ]!"
         fi
-        [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.4.4) Current releases list:\n$(cat ${all_releases_list})"
+        [[ "${out_log}" =~ ^(true|yes)$ ]] && echo -e "${INFO} (1.4.4) Current releases list:\n$(cat ${all_releases_list})"
     else
         echo -e "${NOTE} (1.4.5) The releases list is empty. skip."
     fi
@@ -278,7 +278,7 @@ out_releases_list() {
         for ((i = 0; i < ${#releases_keep_keyword[@]}; i++)); do
             cat ${all_releases_list} | jq -r .tag_name | grep -E "${releases_keep_keyword[$i]}" >>${keep_releases_keyword_list}
         done
-        [[ "${out_log}" == "true" && -s "${keep_releases_keyword_list}" ]] && {
+        [[ "${out_log}" =~ ^(true|yes)$ && -s "${keep_releases_keyword_list}" ]] && {
             echo -e "${INFO} (1.5.2) List of tags that meet the criteria:\n$(cat ${keep_releases_keyword_list})"
         }
 
@@ -289,7 +289,7 @@ out_releases_list() {
         }
 
         # List of remaining tags after filtering.
-        [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.5.4) Current releases list:\n$(cat ${all_releases_list})"
+        [[ "${out_log}" =~ ^(true|yes)$ ]] && echo -e "${INFO} (1.5.4) Current releases list:\n$(cat ${all_releases_list})"
     else
         echo -e "${NOTE} (1.5.5) The filter keyword is empty. skip."
     fi
@@ -303,7 +303,7 @@ out_releases_list() {
             # Generate a list of tags that need to be kept
             cat ${all_releases_list} | head -n ${releases_keep_latest} >${keep_releases_list}
             echo -e "${INFO} (1.6.2) The keep tags list is generated successfully."
-            [[ "${out_log}" == "true" && -s "${keep_releases_list}" ]] && {
+            [[ "${out_log}" =~ ^(true|yes)$ && -s "${keep_releases_list}" ]] && {
                 echo -e "${INFO} (1.6.3) The keep tags list:\n$(cat ${keep_releases_list})"
             }
 
@@ -316,7 +316,7 @@ out_releases_list() {
 
     # Delete list
     if [[ -s "${all_releases_list}" ]]; then
-        [[ "${out_log}" == "true" ]] && echo -e "${INFO} (1.6.5) Delete releases list:\n$(cat ${all_releases_list})"
+        [[ "${out_log}" =~ ^(true|yes)$ ]] && echo -e "${INFO} (1.6.5) Delete releases list:\n$(cat ${all_releases_list})"
     else
         echo -e "${NOTE} (1.6.6) The delete releases list is empty. skip."
     fi
@@ -351,7 +351,7 @@ del_releases_tags() {
     echo -e "${STEPS} Start deleting tags..."
 
     # Delete the tags associated with releases
-    if [[ "${delete_tags}" == "true" && -s "${all_releases_list}" && -n "$(cat ${all_releases_list} | jq -r .tag_name)" ]]; then
+    if [[ "${delete_tags}" =~ ^(true|yes)$ && -s "${all_releases_list}" && -n "$(cat ${all_releases_list} | jq -r .tag_name)" ]]; then
         cat ${all_releases_list} | jq -r .tag_name | while read tag_name; do
             {
                 curl -s \
@@ -424,7 +424,7 @@ get_workflows_list() {
 
         # Print the result log
         echo -e "${INFO} (2.3.1) The api.github.com for workflows request successfully."
-        [[ "${out_log}" == "true" ]] && {
+        [[ "${out_log}" =~ ^(true|yes)$ ]] && {
             echo -e "${INFO} (2.3.2) Count of workflow runs: [ $(cat ${all_workflows_list} | wc -l) ]"
             echo -e "${INFO} (2.3.3) All workflows runs list:\n$(cat ${all_workflows_list})"
         }
@@ -445,7 +445,7 @@ out_workflows_list() {
         for ((i = 0; i < ${#workflows_keep_keyword[@]}; i++)); do
             cat ${all_workflows_list} | jq -r .name | grep -E "${workflows_keep_keyword[$i]}" >>${keep_keyword_workflows_list}
         done
-        [[ "${out_log}" == "true" && -s "${keep_keyword_workflows_list}" ]] && {
+        [[ "${out_log}" =~ ^(true|yes)$ && -s "${keep_keyword_workflows_list}" ]] && {
             echo -e "${INFO} (2.4.2) List of Workflows runs that meet the criteria:\n$(cat ${keep_keyword_workflows_list})"
         }
 
@@ -456,7 +456,7 @@ out_workflows_list() {
         }
 
         # List of remaining workflows after filtering by keywords
-        [[ "${out_log}" == "true" ]] && echo -e "${INFO} (2.4.4) Current workflows runs list:\n$(cat ${all_workflows_list})"
+        [[ "${out_log}" =~ ^(true|yes)$ ]] && echo -e "${INFO} (2.4.4) Current workflows runs list:\n$(cat ${all_workflows_list})"
     else
         echo -e "${NOTE} (2.4.5) The filter keyword is empty. skip."
     fi
@@ -488,7 +488,7 @@ out_workflows_list() {
             # Remove duplicate lines
             [[ -s "${keep_workflows_list}" ]] && {
                 awk '!a[$0]++' ${keep_workflows_list} >${tmp_josn_file} && mv -f ${tmp_josn_file} ${keep_workflows_list}
-                [[ "${out_log}" == "true" ]] && echo -e "${INFO} (2.5.3) Keep workflows list:\n$(cat ${keep_workflows_list})"
+                [[ "${out_log}" =~ ^(true|yes)$ ]] && echo -e "${INFO} (2.5.3) Keep workflows list:\n$(cat ${keep_workflows_list})"
             }
         fi
     else
@@ -497,7 +497,7 @@ out_workflows_list() {
 
     # Delete list
     if [[ -s "${all_workflows_list}" ]]; then
-        [[ "${out_log}" == "true" ]] && echo -e "${INFO} (2.5.5) Delete workflows list:\n$(cat ${all_workflows_list})"
+        [[ "${out_log}" =~ ^(true|yes)$ ]] && echo -e "${INFO} (2.5.5) Delete workflows list:\n$(cat ${all_workflows_list})"
     else
         echo -e "${NOTE} (2.5.6) The delete workflows list is empty. skip."
     fi
@@ -535,7 +535,7 @@ echo -e "${STEPS} Welcome to use the delete older releases and workflow runs too
 init_var "${@}"
 
 # Delete release
-if [[ "${delete_releases}" == "true" ]]; then
+if [[ "${delete_releases}" =~ ^(true|yes)$ ]]; then
     get_releases_list
     out_releases_list
     del_releases_file
@@ -545,7 +545,7 @@ else
 fi
 
 # Delete workflows
-if [[ "${delete_workflows}" == "true" ]]; then
+if [[ "${delete_workflows}" =~ ^(true|yes)$ ]]; then
     get_workflows_list
     out_workflows_list
     del_workflows_runs
@@ -555,4 +555,3 @@ fi
 
 # Show all process completion prompts
 echo -e "${SUCCESS} All process completed successfully."
-wait

@@ -23,9 +23,9 @@ You can use this Actions by introducing it in the `.github/workflows/*.yml` work
 
 ## Setting instructions / 设置说明
 
-You can configure the deletion settings in the delete.yml file with the following options:
+You can configure the following options in the delete.yml file:
 
-您可以在 delete.yml 文件中使用以下选项配置删除设置：
+您可以在 delete.yml 文件中使用以下选项进行配置：
 
 | Key / 选项               | Required   | Description / 说明                       |
 | ----------------------- | ---------- | ---------------------------------------- |
