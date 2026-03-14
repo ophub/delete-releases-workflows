@@ -54,14 +54,14 @@ runs:
       run: |
         #======================================= Define common functions =======================================
         #
-        # Error color
+        # Error output formatting
         ERROR="[\033[91m ERROR \033[0m]"
         error_msg() {
             echo -e "${ERROR} ${1}"
             exit 1
         }
         #
-        # Validation Boolean type function
+        # Validate boolean parameter
         validate_boolean() {
             local var="${1}" param_name="${2}"
             if [[ ! "${var}" =~ ^(true|false)$ ]]; then
@@ -69,7 +69,7 @@ runs:
             fi
         }
         #
-        # Verify integer function
+        # Validate positive integer parameter
         validate_integer() {
             local var="${1}" param_name="${2}"
             if [[ ! "${var}" =~ ^(0|[1-9][0-9]*)$ ]]; then
@@ -77,7 +77,7 @@ runs:
             fi
         }
         #
-        # Verify pre-release options function
+        # Validate pre-release option parameter
         validate_prerelease() {
             local var="${1}" param_name="${2}"
             if [[ ! "${var}" =~ ^(true|false|all)$ ]]; then
@@ -89,41 +89,41 @@ runs:
         #
         # Print the current action path and workflow run ID
         cd ${{ github.action_path }}
-        echo -e "Current Actions path: ${PWD}"
-        echo -e "Current workflow run_id: ${GITHUB_RUN_ID}"
+        echo -e "Action path: ${PWD}"
+        echo -e "Workflow Run ID: ${GITHUB_RUN_ID}"
 
-        # Receive input parameters related to releases
+        # Receive release-related input parameters
         delete_releases="${{ inputs.delete_releases }}"
         prerelease_option="${{ inputs.prerelease_option }}"
         releases_keep_latest="${{ inputs.releases_keep_latest }}"
         releases_keep_keyword="${{ inputs.releases_keep_keyword }}"
         delete_tags="${{ inputs.delete_tags }}"
         #
-        # Receive input parameters related to workflows
+        # Receive workflow-related input parameters
         delete_workflows="${{ inputs.delete_workflows }}"
         workflows_keep_day="${{ inputs.workflows_keep_day }}"
         workflows_keep_keyword="${{ inputs.workflows_keep_keyword }}"
         #
-        # Receive input parameters related to system environment
+        # Receive system environment input parameters
         out_log="${{ inputs.out_log }}"
         repo="${{ inputs.repo }}"
         gh_token="${{ inputs.gh_token }}"
 
-        # Verify releases parameters
-        [[ -z "${delete_releases}" ]] && error_msg "Please set whether to delete releases."
+        # Validate release parameters
+        [[ -z "${delete_releases}" ]] && error_msg "The 'delete_releases' parameter is required."
         [[ -n "${delete_releases}" ]] && validate_boolean "${delete_releases}" "delete_releases"
         [[ -n "${prerelease_option}" ]] && validate_prerelease "${prerelease_option}" "prerelease_option"
         [[ -n "${releases_keep_latest}" ]] && validate_integer "${releases_keep_latest}" "releases_keep_latest"
         [[ -n "${delete_tags}" ]] && validate_boolean "${delete_tags}" "delete_tags"
         #
-        # Verify workflows parameters
-        [[ -z "${delete_workflows}" ]] && error_msg "Please set whether to delete workflows."
+        # Validate workflow parameters
+        [[ -z "${delete_workflows}" ]] && error_msg "The 'delete_workflows' parameter is required."
         [[ -n "${delete_workflows}" ]] && validate_boolean "${delete_workflows}" "delete_workflows"
         [[ -n "${workflows_keep_day}" ]] && validate_integer "${workflows_keep_day}" "workflows_keep_day"
         #
         # Validate system environment parameters
         [[ -n "${out_log}" ]] && validate_boolean "${out_log}" "out_log"
-        [[ -z "${gh_token}" ]] && error_msg "Please set the token: [ gh_token ]."
+        [[ -z "${gh_token}" ]] && error_msg "The 'gh_token' parameter is required."
         #
         #===================================== Build command line arguments =====================================
         #
