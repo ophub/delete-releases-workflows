@@ -56,8 +56,14 @@ error_msg() {
 init_var() {
     echo -e "${STEPS} Initializing parameters..."
 
-    # Install required dependencies
-    sudo apt-get -qq update && sudo apt-get -qq install -y jq curl
+    # Install required dependencies (skip if already installed)
+    local missing_pkgs=()
+    command -v jq >/dev/null 2>&1 || missing_pkgs+=("jq")
+    command -v curl >/dev/null 2>&1 || missing_pkgs+=("curl")
+    if [[ "${#missing_pkgs[@]}" -gt 0 ]]; then
+        echo -e "${INFO} Installing missing dependencies: [ ${missing_pkgs[*]} ]"
+        sudo apt-get -qq update && sudo apt-get -qq install -y "${missing_pkgs[@]}"
+    fi
 
     # Options followed by [ : ] require a parameter value
     local options="r:a:t:p:l:w:s:d:k:o:g:"
@@ -172,6 +178,9 @@ init_var() {
         esac
     done
 
+    # Validate required parameters
+    [[ -z "${gh_token}" ]] && error_msg "[ gh_token ] is required."
+
     echo -e "${INFO} repo: [ ${repo} ]"
     echo -e "${INFO} delete_releases: [ ${delete_releases} ]"
     echo -e "${INFO} delete_tags: [ ${delete_tags} ]"
@@ -193,32 +202,52 @@ get_releases_list() {
 
     # Create temporary file for storing results
     all_releases_list="josn_api_releases"
-    echo "" >${all_releases_list}
+    >"${all_releases_list}"
 
     # Fetch releases via paginated API calls
     while true; do
-        response="$(
-            curl -s -L \
-                -H "Accept: application/vnd.github+json" \
-                -H "Authorization: Bearer ${gh_token}" \
-                -H "X-GitHub-Api-Version: 2022-11-28" \
-                "https://api.github.com/repos/${repo}/releases?per_page=${github_per_page}&page=${github_page}"
-        )"
+        # Retry API call on transient errors
+        api_retry=0
+        response=""
+        response_type=""
+        while [[ "${api_retry}" -lt 3 ]]; do
+            response="$(
+                curl -s -L \
+                    -H "Accept: application/vnd.github+json" \
+                    -H "Authorization: Bearer ${gh_token}" \
+                    -H "X-GitHub-Api-Version: 2022-11-28" \
+                    "https://api.github.com/repos/${repo}/releases?per_page=${github_per_page}&page=${github_page}"
+            )"
 
-        # Check if the response is empty or an error occurred
-        if [[ -z "${response}" ]] || [[ "${response}" == *"Not Found"* ]]; then
-            break
-        else
-            # Get the number of results returned by the current page
-            get_results_length="$(echo "${response}" | jq '. | length')"
-            echo -e "${INFO} (1.1.${github_page}) Queried page [ ${github_page} ], returned [ ${get_results_length} ] results."
+            [[ -z "${response}" ]] && break
 
-            # Sort results by publish date in descending order
-            echo "${response}" |
-                jq -s '.[] | sort_by(.published_at)|reverse' |
-                jq -c '.[] | {date: .published_at, id: .id, prerelease: .prerelease, tag_name: .tag_name}' \
-                    >>${all_releases_list}
-        fi
+            response_type="$(echo "${response}" | jq -r 'type' 2>/dev/null)"
+            if [[ "${response_type}" == "array" ]]; then
+                break
+            else
+                api_error="$(echo "${response}" | jq -r '.message // "Unknown error"' 2>/dev/null)"
+                api_retry=$((${api_retry} + 1))
+                if [[ "${api_retry}" -lt 3 ]]; then
+                    echo -e "${NOTE} (1.1.${github_page}) API error (attempt ${api_retry}/3): ${api_error}, retrying in 30s..."
+                    sleep 30
+                else
+                    echo -e "${ERROR} (1.1.${github_page}) API error after 3 attempts: ${api_error}"
+                fi
+            fi
+        done
+
+        # Skip if API call failed
+        [[ -z "${response}" || "${response_type}" != "array" ]] && break
+
+        # Get the number of results returned by the current page
+        get_results_length="$(echo "${response}" | jq '. | length')"
+        echo -e "${INFO} (1.1.${github_page}) Queried page [ ${github_page} ], returned [ ${get_results_length} ] results."
+
+        # Sort results by publish date in descending order
+        echo "${response}" |
+            jq -s '.[] | sort_by(.published_at)|reverse' |
+            jq -c '.[] | {date: .published_at, id: .id, prerelease: .prerelease, tag_name: .tag_name}' \
+                >>${all_releases_list}
 
         # Check if the current page has fewer results than the per_page limit
         if [[ "${get_results_length}" -lt "${github_per_page}" ]]; then
@@ -230,13 +259,17 @@ get_releases_list() {
             echo -e "${NOTE} (1.2.1) Reached the maximum page limit (${github_max_page}), stopping pagination."
             break
         else
-            github_page="$((github_page + 1))"
+            github_page="$((${github_page} + 1))"
         fi
     done
 
     if [[ -s "${all_releases_list}" ]]; then
         # Remove empty lines
         sed -i '/^[[:space:]]*$/d' "${all_releases_list}"
+
+        # Global sort by date descending across all pages
+        tmp_sort_file="$(mktemp)"
+        jq -sc 'sort_by(.date) | reverse | .[]' "${all_releases_list}" >"${tmp_sort_file}" && mv "${tmp_sort_file}" "${all_releases_list}"
 
         # Print the result log
         echo -e "${INFO} (1.3.1) Releases list fetched successfully from GitHub API."
@@ -258,10 +291,12 @@ out_releases_list() {
             echo -e "${NOTE} (1.4.1) Pre-release filter set to 'all', no filtering applied."
         elif [[ "${prerelease_option}" =~ ^(false|no)$ ]]; then
             echo -e "${INFO} (1.4.2) Filtering: retaining only non-pre-release items."
-            cat ${all_releases_list} | jq -r '.prerelease' | grep -w "true" | while read line; do sed -i "/${line}/d" ${all_releases_list}; done
+            tmp_prerelease="$(mktemp)"
+            jq -c 'select(.prerelease == false)' "${all_releases_list}" >"${tmp_prerelease}" && mv "${tmp_prerelease}" "${all_releases_list}"
         elif [[ "${prerelease_option}" =~ ^(true|yes)$ ]]; then
             echo -e "${INFO} (1.4.3) Filtering: retaining only pre-release items."
-            cat ${all_releases_list} | jq -r '.prerelease' | grep -w "false" | while read line; do sed -i "/${line}/d" ${all_releases_list}; done
+            tmp_prerelease="$(mktemp)"
+            jq -c 'select(.prerelease == true)' "${all_releases_list}" >"${tmp_prerelease}" && mv "${tmp_prerelease}" "${all_releases_list}"
         else
             error_msg "Invalid prerelease option [ ${prerelease_option} ]!"
         fi
@@ -275,18 +310,27 @@ out_releases_list() {
     if [[ "${#releases_keep_keyword[@]}" -ge "1" && -s "${all_releases_list}" ]]; then
         # Match tags containing specified keywords
         echo -e "${INFO} (1.5.1) Keyword filter for release tags: [ $(echo ${releases_keep_keyword[@]} | xargs) ]"
-        for ((i = 0; i < ${#releases_keep_keyword[@]}; i++)); do
-            cat ${all_releases_list} | jq -r .tag_name | grep -E "${releases_keep_keyword[$i]}" >>${keep_releases_keyword_list}
-        done
+
+        # Build JSON array of keywords for safe jq matching
+        keywords_json="$(printf '%s\n' "${releases_keep_keyword[@]}" | jq -R . | jq -sc '.')"
+
+        # Save matched releases (to retain) to keyword list
+        jq -c --argjson kws "${keywords_json}" \
+            'select(. as $item | any($kws[]; $item.tag_name | contains(.)))' \
+            "${all_releases_list}" >"${keep_releases_keyword_list}"
+
         [[ "${out_log}" =~ ^(true|yes)$ && -s "${keep_releases_keyword_list}" ]] && {
             echo -e "${INFO} (1.5.2) Tags matching keyword filter (to be retained):\n$(cat ${keep_releases_keyword_list})"
         }
 
-        # Exclude matched tags from deletion list
-        [[ -s "${keep_releases_keyword_list}" ]] && {
-            cat ${keep_releases_keyword_list} | while read line; do sed -i "/${line}/d" ${all_releases_list}; done
+        # Exclude matched releases from deletion list
+        if [[ -s "${keep_releases_keyword_list}" ]]; then
+            tmp_keyword="$(mktemp)"
+            jq -c --argjson kws "${keywords_json}" \
+                'select(. as $item | any($kws[]; $item.tag_name | contains(.)) | not)' \
+                "${all_releases_list}" >"${tmp_keyword}" && mv "${tmp_keyword}" "${all_releases_list}"
             echo -e "${INFO} (1.5.3) Keyword-based tag filtering completed."
-        }
+        fi
 
         # Remaining releases after keyword filtering
         [[ "${out_log}" =~ ^(true|yes)$ ]] && echo -e "${INFO} (1.5.4) Releases list after keyword filtering:\n$(cat ${all_releases_list})"
@@ -328,18 +372,35 @@ del_releases_file() {
     echo -e "${STEPS} Deleting releases..."
 
     # Delete the target releases via API
-    if [[ -s "${all_releases_list}" && -n "$(cat ${all_releases_list} | jq -r .id)" ]]; then
-        cat ${all_releases_list} | jq -r .id | while read release_id; do
-            {
-                curl -s \
-                    -X DELETE \
-                    -H "Accept: application/vnd.github+json" \
-                    -H "Authorization: Bearer ${gh_token}" \
-                    -H "X-GitHub-Api-Version: 2022-11-28" \
-                    https://api.github.com/repos/${repo}/releases/${release_id}
-            }
-        done
-        echo -e "${SUCCESS} (1.7.1) Releases deleted successfully."
+    if [[ -s "${all_releases_list}" && -n "$(jq -r .id "${all_releases_list}")" ]]; then
+        del_success=0
+        del_fail=0
+        while read release_id; do
+            retry=0
+            while true; do
+                http_code=$(
+                    curl -s -o /dev/null -w '%{http_code}' \
+                        -X DELETE \
+                        -H "Accept: application/vnd.github+json" \
+                        -H "Authorization: Bearer ${gh_token}" \
+                        -H "X-GitHub-Api-Version: 2022-11-28" \
+                        "https://api.github.com/repos/${repo}/releases/${release_id}"
+                )
+                if [[ "${http_code}" =~ ^(200|204)$ ]]; then
+                    del_success=$((${del_success} + 1))
+                    break
+                elif [[ "${http_code}" == "429" && "${retry}" -lt 3 ]]; then
+                    retry=$((${retry} + 1))
+                    echo -e "${NOTE} Rate limited (release ${release_id}), retry ${retry}/3, waiting 60s..."
+                    sleep 60
+                else
+                    echo -e "${ERROR} Failed to delete release [ ${release_id} ] (HTTP ${http_code})"
+                    del_fail=$((${del_fail} + 1))
+                    break
+                fi
+            done
+        done < <(jq -r .id "${all_releases_list}")
+        echo -e "${SUCCESS} (1.7.1) Releases deletion completed: [ ${del_success} ] succeeded, [ ${del_fail} ] failed."
     else
         echo -e "${NOTE} (1.7.2) No releases to delete, skipping."
     fi
@@ -351,18 +412,35 @@ del_releases_tags() {
     echo -e "${STEPS} Deleting associated tags..."
 
     # Delete tags associated with the removed releases
-    if [[ "${delete_tags}" =~ ^(true|yes)$ && -s "${all_releases_list}" && -n "$(cat ${all_releases_list} | jq -r .tag_name)" ]]; then
-        cat ${all_releases_list} | jq -r .tag_name | while read tag_name; do
-            {
-                curl -s \
-                    -X DELETE \
-                    -H "Accept: application/vnd.github+json" \
-                    -H "Authorization: Bearer ${gh_token}" \
-                    -H "X-GitHub-Api-Version: 2022-11-28" \
-                    https://api.github.com/repos/${repo}/git/refs/tags/${tag_name}
-            }
-        done
-        echo -e "${SUCCESS} (1.8.1) Tags deleted successfully."
+    if [[ "${delete_tags}" =~ ^(true|yes)$ && -s "${all_releases_list}" && -n "$(jq -r .tag_name "${all_releases_list}")" ]]; then
+        del_success=0
+        del_fail=0
+        while read tag_name; do
+            retry=0
+            while true; do
+                http_code=$(
+                    curl -s -o /dev/null -w '%{http_code}' \
+                        -X DELETE \
+                        -H "Accept: application/vnd.github+json" \
+                        -H "Authorization: Bearer ${gh_token}" \
+                        -H "X-GitHub-Api-Version: 2022-11-28" \
+                        "https://api.github.com/repos/${repo}/git/refs/tags/${tag_name}"
+                )
+                if [[ "${http_code}" =~ ^(200|204)$ ]]; then
+                    del_success=$((${del_success} + 1))
+                    break
+                elif [[ "${http_code}" == "429" && "${retry}" -lt 3 ]]; then
+                    retry=$((${retry} + 1))
+                    echo -e "${NOTE} Rate limited (tag ${tag_name}), retry ${retry}/3, waiting 60s..."
+                    sleep 60
+                else
+                    echo -e "${ERROR} Failed to delete tag [ ${tag_name} ] (HTTP ${http_code})"
+                    del_fail=$((${del_fail} + 1))
+                    break
+                fi
+            done
+        done < <(jq -r .tag_name "${all_releases_list}")
+        echo -e "${SUCCESS} (1.8.1) Tags deletion completed: [ ${del_success} ] succeeded, [ ${del_fail} ] failed."
     else
         echo -e "${NOTE} (1.8.2) No tags to delete, skipping."
     fi
@@ -378,31 +456,51 @@ get_workflows_list() {
 
     # Create temporary file for storing results
     all_workflows_list="josn_api_workflows"
-    echo "" >${all_workflows_list}
+    >"${all_workflows_list}"
 
     # Fetch workflow runs via paginated API calls
     while true; do
-        response="$(
-            curl -s -L \
-                -H "Accept: application/vnd.github+json" \
-                -H "Authorization: Bearer ${gh_token}" \
-                -H "X-GitHub-Api-Version: 2022-11-28" \
-                "https://api.github.com/repos/${repo}/actions/runs?per_page=${github_per_page}&page=${github_page}"
-        )"
+        # Retry API call on transient errors
+        api_retry=0
+        response=""
+        api_success="false"
+        while [[ "${api_retry}" -lt 3 ]]; do
+            response="$(
+                curl -s -L \
+                    -H "Accept: application/vnd.github+json" \
+                    -H "Authorization: Bearer ${gh_token}" \
+                    -H "X-GitHub-Api-Version: 2022-11-28" \
+                    "https://api.github.com/repos/${repo}/actions/runs?per_page=${github_per_page}&page=${github_page}"
+            )"
 
-        # Check if the response is empty or an error occurred
-        if [[ -z "${response}" ]] || [[ "${response}" == *"Not Found"* ]]; then
-            break
-        else
-            # Get the number of results returned by the current page
-            get_results_length="$(echo "${response}" | jq -r '.workflow_runs | length')"
-            echo -e "${INFO} (2.1.${github_page}) Queried page [ ${github_page} ], returned [ ${get_results_length} ] results."
+            [[ -z "${response}" ]] && break
 
-            # Extract completed workflow runs from response
-            echo "${response}" |
-                jq -c '.workflow_runs[] | select(.status == "completed") | {date: .updated_at, id: .id, name: .name}' \
-                    >>${all_workflows_list}
-        fi
+            if [[ "$(echo "${response}" | jq 'has("workflow_runs")' 2>/dev/null)" == "true" ]]; then
+                api_success="true"
+                break
+            else
+                api_error="$(echo "${response}" | jq -r '.message // "Unknown error"' 2>/dev/null)"
+                api_retry=$((${api_retry} + 1))
+                if [[ "${api_retry}" -lt 3 ]]; then
+                    echo -e "${NOTE} (2.1.${github_page}) API error (attempt ${api_retry}/3): ${api_error}, retrying in 30s..."
+                    sleep 30
+                else
+                    echo -e "${ERROR} (2.1.${github_page}) API error after 3 attempts: ${api_error}"
+                fi
+            fi
+        done
+
+        # Skip if API call failed
+        [[ "${api_success}" != "true" ]] && break
+
+        # Get the number of results returned by the current page
+        get_results_length="$(echo "${response}" | jq -r '.workflow_runs | length')"
+        echo -e "${INFO} (2.1.${github_page}) Queried page [ ${github_page} ], returned [ ${get_results_length} ] results."
+
+        # Extract completed workflow runs from response
+        echo "${response}" |
+            jq -c '.workflow_runs[] | select(.status == "completed") | {date: .updated_at, id: .id, name: .name}' \
+                >>${all_workflows_list}
 
         # Check if the current page has fewer results than the per_page limit
         if [[ "${get_results_length}" -lt "${github_per_page}" ]]; then
@@ -414,7 +512,7 @@ get_workflows_list() {
             echo -e "${NOTE} (2.2.1) Reached the maximum page limit (${github_max_page}), stopping pagination."
             break
         else
-            github_page="$((github_page + 1))"
+            github_page="$((${github_page} + 1))"
         fi
     done
 
@@ -442,18 +540,27 @@ out_workflows_list() {
     if [[ "${#workflows_keep_keyword[@]}" -ge "1" && -s "${all_workflows_list}" ]]; then
         # Match workflow names containing specified keywords
         echo -e "${INFO} (2.4.1) Keyword filter for workflow runs: [ $(echo ${workflows_keep_keyword[@]} | xargs) ]"
-        for ((i = 0; i < ${#workflows_keep_keyword[@]}; i++)); do
-            cat ${all_workflows_list} | jq -r .name | grep -E "${workflows_keep_keyword[$i]}" >>${keep_keyword_workflows_list}
-        done
+
+        # Build JSON array of keywords for safe jq matching
+        wf_keywords_json="$(printf '%s\n' "${workflows_keep_keyword[@]}" | jq -R . | jq -sc '.')"
+
+        # Save matched workflow runs (to retain) to keyword list
+        jq -c --argjson kws "${wf_keywords_json}" \
+            'select(. as $item | any($kws[]; $item.name | contains(.)))' \
+            "${all_workflows_list}" >"${keep_keyword_workflows_list}"
+
         [[ "${out_log}" =~ ^(true|yes)$ && -s "${keep_keyword_workflows_list}" ]] && {
             echo -e "${INFO} (2.4.2) Workflow runs matching keyword filter (to be retained):\n$(cat ${keep_keyword_workflows_list})"
         }
 
         # Exclude matched workflow runs from deletion list
-        [[ -s "${keep_keyword_workflows_list}" ]] && {
-            cat ${keep_keyword_workflows_list} | while read line; do sed -i "/${line}/d" ${all_workflows_list}; done
+        if [[ -s "${keep_keyword_workflows_list}" ]]; then
+            tmp_wf_keyword="$(mktemp)"
+            jq -c --argjson kws "${wf_keywords_json}" \
+                'select(. as $item | any($kws[]; $item.name | contains(.)) | not)' \
+                "${all_workflows_list}" >"${tmp_wf_keyword}" && mv "${tmp_wf_keyword}" "${all_workflows_list}"
             echo -e "${INFO} (2.4.3) Keyword-based workflow filtering completed."
-        }
+        fi
 
         # Remaining workflow runs after keyword filtering
         [[ "${out_log}" =~ ^(true|yes)$ ]] && echo -e "${INFO} (2.4.4) Workflow runs list after keyword filtering:\n$(cat ${all_workflows_list})"
@@ -461,12 +568,8 @@ out_workflows_list() {
         echo -e "${NOTE} (2.4.5) No keyword filter specified, skipping."
     fi
 
-    # Temporary file for workflow run dates
-    all_workflows_date_list="josn_all_workflows_date_list"
     # Store workflow runs to retain based on date
     keep_workflows_list="josn_keep_workflows_list"
-    # Temporary JSON file for deduplication
-    tmp_josn_file="$(mktemp)"
     # Apply date-based retention policy for workflow runs
     if [[ -s "${all_workflows_list}" ]]; then
         if [[ "${workflows_keep_day}" -eq "0" ]]; then
@@ -474,21 +577,24 @@ out_workflows_list() {
         else
             # Filter workflow runs within the retention period
             today_second=$(date -d "$(date +"%Y%m%d")" +%s)
-            cat ${all_workflows_list} | jq -r '.date' | awk -F'T' '{print $1}' | tr ' ' '\n' >${all_workflows_date_list}
-            cat ${all_workflows_date_list} | while read line; do
-                line_second="$(date -d "${line//-/}" +%s)"
+            tmp_wf_date="$(mktemp)"
+            >"${keep_workflows_list}"
+            >"${tmp_wf_date}"
+            while IFS= read -r json_line; do
+                run_date="$(echo "${json_line}" | jq -r '.date' | awk -F'T' '{print $1}')"
+                line_second="$(date -d "${run_date//-/}" +%s)"
                 day_diff="$(((${today_second} - ${line_second}) / 86400))"
-                [[ "${day_diff}" -lt "${workflows_keep_day}" ]] && {
-                    grep "${line}T" ${all_workflows_list} >>${keep_workflows_list}
-                    sed -i "/${line}T/d" ${all_workflows_list}
-                }
-            done
+                if [[ "${day_diff}" -lt "${workflows_keep_day}" ]]; then
+                    echo "${json_line}" >>"${keep_workflows_list}"
+                else
+                    echo "${json_line}" >>"${tmp_wf_date}"
+                fi
+            done <"${all_workflows_list}"
+            mv "${tmp_wf_date}" "${all_workflows_list}"
             echo -e "${INFO} (2.5.2) Retention list generated successfully."
 
-            # Remove duplicate entries from retention list
-            [[ -s "${keep_workflows_list}" ]] && {
-                awk '!a[$0]++' ${keep_workflows_list} >${tmp_josn_file} && mv -f ${tmp_josn_file} ${keep_workflows_list}
-                [[ "${out_log}" =~ ^(true|yes)$ ]] && echo -e "${INFO} (2.5.3) Workflow runs to retain:\n$(cat ${keep_workflows_list})"
+            [[ -s "${keep_workflows_list}" && "${out_log}" =~ ^(true|yes)$ ]] && {
+                echo -e "${INFO} (2.5.3) Workflow runs to retain:\n$(cat ${keep_workflows_list})"
             }
         fi
     else
@@ -509,18 +615,35 @@ del_workflows_runs() {
     echo -e "${STEPS} Deleting workflow runs..."
 
     # Delete the target workflow runs via API
-    if [[ -s "${all_workflows_list}" && -n "$(cat ${all_workflows_list} | jq -r .id)" ]]; then
-        cat ${all_workflows_list} | jq -r .id | while read run_id; do
-            {
-                curl -s \
-                    -X DELETE \
-                    -H "Accept: application/vnd.github+json" \
-                    -H "Authorization: Bearer ${gh_token}" \
-                    -H "X-GitHub-Api-Version: 2022-11-28" \
-                    https://api.github.com/repos/${repo}/actions/runs/${run_id}
-            }
-        done
-        echo -e "${SUCCESS} (2.6.1) Workflow runs deleted successfully."
+    if [[ -s "${all_workflows_list}" && -n "$(jq -r .id "${all_workflows_list}")" ]]; then
+        del_success=0
+        del_fail=0
+        while read run_id; do
+            retry=0
+            while true; do
+                http_code=$(
+                    curl -s -o /dev/null -w '%{http_code}' \
+                        -X DELETE \
+                        -H "Accept: application/vnd.github+json" \
+                        -H "Authorization: Bearer ${gh_token}" \
+                        -H "X-GitHub-Api-Version: 2022-11-28" \
+                        "https://api.github.com/repos/${repo}/actions/runs/${run_id}"
+                )
+                if [[ "${http_code}" =~ ^(200|204)$ ]]; then
+                    del_success=$((${del_success} + 1))
+                    break
+                elif [[ "${http_code}" == "429" && "${retry}" -lt 3 ]]; then
+                    retry=$((${retry} + 1))
+                    echo -e "${NOTE} Rate limited (workflow run ${run_id}), retry ${retry}/3, waiting 60s..."
+                    sleep 60
+                else
+                    echo -e "${ERROR} Failed to delete workflow run [ ${run_id} ] (HTTP ${http_code})"
+                    del_fail=$((${del_fail} + 1))
+                    break
+                fi
+            done
+        done < <(jq -r .id "${all_workflows_list}")
+        echo -e "${SUCCESS} (2.6.1) Workflow runs deletion completed: [ ${del_success} ] succeeded, [ ${del_fail} ] failed."
     else
         echo -e "${NOTE} (2.6.2) No workflow runs to delete, skipping."
     fi
