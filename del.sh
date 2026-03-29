@@ -316,7 +316,7 @@ out_releases_list() {
 
         # Save matched releases (to retain) to keyword list
         jq -c --argjson kws "${keywords_json}" \
-            'select(. as $item | any($kws[]; $item.tag_name | contains(.)))' \
+            'select(. as $item | any($kws[]; . as $k | $item.tag_name | contains($k)))' \
             "${all_releases_list}" >"${keep_releases_keyword_list}"
 
         [[ "${out_log}" =~ ^(true|yes)$ && -s "${keep_releases_keyword_list}" ]] && {
@@ -327,7 +327,7 @@ out_releases_list() {
         if [[ -s "${keep_releases_keyword_list}" ]]; then
             tmp_keyword="$(mktemp)"
             jq -c --argjson kws "${keywords_json}" \
-                'select(. as $item | any($kws[]; $item.tag_name | contains(.)) | not)' \
+                'select(. as $item | any($kws[]; . as $k | $item.tag_name | contains($k)) | not)' \
                 "${all_releases_list}" >"${tmp_keyword}" && mv "${tmp_keyword}" "${all_releases_list}"
             echo -e "${INFO} (1.5.3) Keyword-based tag filtering completed."
         fi
@@ -546,7 +546,7 @@ out_workflows_list() {
 
         # Save matched workflow runs (to retain) to keyword list
         jq -c --argjson kws "${wf_keywords_json}" \
-            'select(. as $item | any($kws[]; $item.name | contains(.)))' \
+            'select(. as $item | any($kws[]; . as $k | $item.name | contains($k)))' \
             "${all_workflows_list}" >"${keep_keyword_workflows_list}"
 
         [[ "${out_log}" =~ ^(true|yes)$ && -s "${keep_keyword_workflows_list}" ]] && {
@@ -557,7 +557,7 @@ out_workflows_list() {
         if [[ -s "${keep_keyword_workflows_list}" ]]; then
             tmp_wf_keyword="$(mktemp)"
             jq -c --argjson kws "${wf_keywords_json}" \
-                'select(. as $item | any($kws[]; $item.name | contains(.)) | not)' \
+                'select(. as $item | any($kws[]; . as $k | $item.name | contains($k)) | not)' \
                 "${all_workflows_list}" >"${tmp_wf_keyword}" && mv "${tmp_wf_keyword}" "${all_workflows_list}"
             echo -e "${INFO} (2.4.3) Keyword-based workflow filtering completed."
         fi
