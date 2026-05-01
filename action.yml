@@ -51,6 +51,8 @@ runs:
   using: "composite"
   steps:
     - shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh_token }}
       run: |
         #======================================= Define common functions =======================================
         #
@@ -107,7 +109,6 @@ runs:
         # Receive system environment input parameters
         out_log="${{ inputs.out_log }}"
         repo="${{ inputs.repo }}"
-        gh_token="${{ inputs.gh_token }}"
 
         # Validate release parameters
         [[ -z "${delete_releases}" ]] && error_msg "The 'delete_releases' parameter is required."
@@ -123,7 +124,7 @@ runs:
         #
         # Validate system environment parameters
         [[ -n "${out_log}" ]] && validate_boolean "${out_log}" "out_log"
-        [[ -z "${gh_token}" ]] && error_msg "The 'gh_token' parameter is required."
+        [[ -z "${GH_TOKEN}" ]] && error_msg "The 'gh_token' parameter is required."
         #
         #===================================== Build command line arguments =====================================
         #
@@ -145,7 +146,6 @@ runs:
         # Build command line arguments for system environment
         [[ -n "${out_log}" ]] && make_command="${make_command} -o ${out_log}"
         [[ -n "${repo}" ]] && make_command="${make_command} -r ${repo}"
-        [[ -n "${gh_token}" ]] && make_command="${make_command} -g ${gh_token}"
         #
         # Execute the deletion script
         chmod +x del.sh
