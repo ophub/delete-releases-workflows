@@ -51,7 +51,7 @@ The following options can be configured in the delete.yml file:
 - [amlogic-s9xxx-armbian](https://github.com/ophub/amlogic-s9xxx-armbian)
 - [amlogic-s9xxx-openwrt](https://github.com/ophub/amlogic-s9xxx-openwrt)
 - [flippy-openwrt-actions](https://github.com/ophub/flippy-openwrt-actions)
-- [upload-to-release](https://github.com/ophub/upload-to-release)
+- [upload-to-releases](https://github.com/ophub/upload-to-releases)
 
 ## License / 许可协议
 
