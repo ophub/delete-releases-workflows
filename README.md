@@ -44,6 +44,34 @@ The following options can be configured in the delete.yml file:
 - Each run can fetch up to 10,000 Releases and 10,000 Workflow run records (100 per page × 100 pages). If more records exist, run the action multiple times.
 - 每次运行最多可获取 10,000 个 Releases 和 10,000 条 Workflow 运行记录（每页 100 条 × 最多 100 页）。如果记录数超出上限，需多次执行该操作。
 
+## Notes / 注意事项
+
+- ✅ This Action requires the `GITHUB_TOKEN` to have the following write permissions. You can grant these in either of two ways:
+  - **Recommended — add a [`permissions`](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#permissions) block to your workflow job:**
+
+    ```yaml
+    jobs:
+      build:
+        permissions:
+          contents: write  # Required to delete releases and tags
+          actions: write   # Required to delete workflow runs
+    ```
+
+  - **Or** go to your repository's `Settings` > `Actions` > `General` > `Workflow permissions`, select `Read and write permissions`, and click `Save`. Note: the YAML approach takes precedence over the repository setting and follows the principle of least privilege.
+
+- ✅ 此 Action 需要 `GITHUB_TOKEN` 具备以下写入权限，有以下两种授权方式：
+  - **推荐 — 在工作流 job 中添加 [`permissions`](https://docs.github.com/zh/actions/reference/workflows-and-actions/workflow-syntax#permissions) 配置：**
+
+    ```yaml
+    jobs:
+      build:
+        permissions:
+          contents: write  # 删除 Release 和 Tag 所需
+          actions: write   # 删除 Workflow 运行记录所需
+    ```
+
+  - **或者** 进入仓库的 `Settings` > `Actions` > `General` > `Workflow permissions`，选择 `Read and write permissions`，然后点击 `Save` 保存。注意：YAML 配置方式优先级更高，且遵循最小权限原则，推荐优先使用。
+
 ## Links / 链接
 
 - [GitHub Docs](https://docs.github.com/en/rest/releases/releases?list-releases)
