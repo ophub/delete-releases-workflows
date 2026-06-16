@@ -76,124 +76,41 @@ init_var() {
         sudo apt-get -qq update && sudo apt-get -qq install -y "${missing_pkgs[@]}"
     fi
 
-    # Options followed by [ : ] require a parameter value
-    # Note: gh_token is read from the GH_TOKEN environment variable
-    local options="r:a:t:p:l:w:s:d:k:o:"
-    parsed_args=$(getopt -o "${options}" -- "${@}")
-    [[ ${?} -ne 0 ]] && error_msg "Failed to parse command-line parameters."
-    eval set -- "${parsed_args}"
-
-    while true; do
-        case "${1}" in
-        -r | --repo)
-            if [[ -n "${2}" ]]; then
-                repo="${2}"
-                shift 2
-            else
-                error_msg "Missing value for -r (repo) parameter [ ${2} ]!"
-            fi
-            ;;
-        -a | --delete_releases)
-            if [[ -n "${2}" ]]; then
-                delete_releases="${2}"
-                shift 2
-            else
-                error_msg "Missing value for -a (delete_releases) parameter [ ${2} ]!"
-            fi
-            ;;
-        -t | --delete_tags)
-            if [[ -n "${2}" ]]; then
-                delete_tags="${2}"
-                shift 2
-            else
-                error_msg "Missing value for -t (delete_tags) parameter [ ${2} ]!"
-            fi
-            ;;
-        -p | --prerelease_option)
-            if [[ -n "${2}" ]]; then
-                prerelease_option="${2}"
-                shift 2
-            else
-                error_msg "Missing value for -p (prerelease_option) parameter [ ${2} ]!"
-            fi
-            ;;
-        -l | --releases_keep_latest)
-            if [[ -n "${2}" ]]; then
-                releases_keep_latest="${2}"
-                shift 2
-            else
-                error_msg "Missing value for -l (releases_keep_latest) parameter [ ${2} ]!"
-            fi
-            ;;
-        -w | --releases_keep_keyword)
-            if [[ -n "${2}" ]]; then
-                # Split slash-separated keywords without triggering shell glob expansion
-                IFS='/' read -r -a releases_keep_keyword <<<"${2}"
-                shift 2
-            else
-                error_msg "Missing value for -w (releases_keep_keyword) parameter [ ${2} ]!"
-            fi
-            ;;
-        -s | --delete_workflows)
-            if [[ -n "${2}" ]]; then
-                delete_workflows="${2}"
-                shift 2
-            else
-                error_msg "Missing value for -s (delete_workflows) parameter [ ${2} ]!"
-            fi
-            ;;
-        -d | --workflows_keep_day)
-            if [[ -n "${2}" ]]; then
-                workflows_keep_day="${2}"
-                shift 2
-            else
-                error_msg "Missing value for -d (workflows_keep_day) parameter [ ${2} ]!"
-            fi
-            ;;
-        -k | --workflows_keep_keyword)
-            if [[ -n "${2}" ]]; then
-                # Split slash-separated keywords without triggering shell glob expansion
-                IFS='/' read -r -a workflows_keep_keyword <<<"${2}"
-                shift 2
-            else
-                error_msg "Missing value for -k (workflows_keep_keyword) parameter [ ${2} ]!"
-            fi
-            ;;
-        -o | --out_log)
-            if [[ -n "${2}" ]]; then
-                out_log="${2}"
-                shift 2
-            else
-                error_msg "Missing value for -o (out_log) parameter [ ${2} ]!"
-            fi
-            ;;
-        --)
-            shift
-            break
-            ;;
-        *)
-            [[ -n "${1}" ]] && error_msg "Unrecognized option [ ${1} ]!"
-            break
-            ;;
-        esac
-    done
-
-    # Read the GitHub token from the environment to avoid exposure in the process list
+    # ── Read inputs from INPUT_* environment variables ────────────────────
+    # All inputs are injected by action.yml as INPUT_* env vars.
+    # GH_TOKEN is kept separate and never exposed in INPUT_* to avoid leaking
+    # the token value into the process list or shell history.
     gh_token="${GH_TOKEN:-}"
+    repo="${INPUT_REPO:-}"
+    delete_releases="${INPUT_DELETE_RELEASES:-false}"
+    delete_tags="${INPUT_DELETE_TAGS:-false}"
+    prerelease_option="${INPUT_PRERELEASE_OPTION:-all}"
+    releases_keep_latest="${INPUT_RELEASES_KEEP_LATEST:-90}"
+    delete_workflows="${INPUT_DELETE_WORKFLOWS:-false}"
+    workflows_keep_day="${INPUT_WORKFLOWS_KEEP_DAY:-90}"
+    out_log="${INPUT_OUT_LOG:-false}"
+
+    # Split slash-separated keywords into arrays (without triggering shell glob expansion)
+    if [[ -n "${INPUT_RELEASES_KEEP_KEYWORD:-}" ]]; then
+        IFS='/' read -r -a releases_keep_keyword <<<"${INPUT_RELEASES_KEEP_KEYWORD}"
+    fi
+    if [[ -n "${INPUT_WORKFLOWS_KEEP_KEYWORD:-}" ]]; then
+        IFS='/' read -r -a workflows_keep_keyword <<<"${INPUT_WORKFLOWS_KEEP_KEYWORD}"
+    fi
 
     # Validate required parameters
     [[ -z "${gh_token}" ]] && error_msg "[ gh_token ] is required (must be set via the GH_TOKEN environment variable)."
 
-    echo -e "${INFO} repo: [ ${repo} ]"
-    echo -e "${INFO} delete_releases: [ ${delete_releases} ]"
-    echo -e "${INFO} delete_tags: [ ${delete_tags} ]"
-    echo -e "${INFO} prerelease_option: [ ${prerelease_option} ]"
-    echo -e "${INFO} releases_keep_latest: [ ${releases_keep_latest} ]"
-    echo -e "${INFO} releases_keep_keyword: [ $(echo ${releases_keep_keyword[@]} | xargs) ]"
-    echo -e "${INFO} delete_workflows: [ ${delete_workflows} ]"
-    echo -e "${INFO} workflows_keep_day: [ ${workflows_keep_day} ]"
+    echo -e "${INFO} repo:                   [ ${repo} ]"
+    echo -e "${INFO} delete_releases:        [ ${delete_releases} ]"
+    echo -e "${INFO} delete_tags:            [ ${delete_tags} ]"
+    echo -e "${INFO} prerelease_option:      [ ${prerelease_option} ]"
+    echo -e "${INFO} releases_keep_latest:   [ ${releases_keep_latest} ]"
+    echo -e "${INFO} releases_keep_keyword:  [ $(echo ${releases_keep_keyword[@]} | xargs) ]"
+    echo -e "${INFO} delete_workflows:       [ ${delete_workflows} ]"
+    echo -e "${INFO} workflows_keep_day:     [ ${workflows_keep_day} ]"
     echo -e "${INFO} workflows_keep_keyword: [ $(echo ${workflows_keep_keyword[@]} | xargs) ]"
-    echo -e "${INFO} out_log: [ ${out_log} ]"
+    echo -e "${INFO} out_log:                [ ${out_log} ]"
     echo -e ""
 }
 
@@ -403,9 +320,9 @@ del_releases_file() {
                 if [[ "${http_code}" =~ ^(200|204)$ ]]; then
                     del_success=$((${del_success} + 1))
                     break
-                elif [[ "${http_code}" == "429" && "${retry}" -lt 3 ]]; then
+                elif [[ ("${http_code}" == "429" || "${http_code}" =~ ^5) && "${retry}" -lt 3 ]]; then
                     retry=$((${retry} + 1))
-                    echo -e "${NOTE} Rate limited (release ${release_id}), retry ${retry}/3, waiting 60s..."
+                    echo -e "${NOTE} HTTP ${http_code} (release ${release_id}), retry ${retry}/3, waiting 60s..."
                     sleep 60
                 else
                     echo -e "${ERROR} Failed to delete release [ ${release_id} ] (HTTP ${http_code})"
@@ -443,9 +360,9 @@ del_releases_tags() {
                 if [[ "${http_code}" =~ ^(200|204)$ ]]; then
                     del_success=$((${del_success} + 1))
                     break
-                elif [[ "${http_code}" == "429" && "${retry}" -lt 3 ]]; then
+                elif [[ ("${http_code}" == "429" || "${http_code}" =~ ^5) && "${retry}" -lt 3 ]]; then
                     retry=$((${retry} + 1))
-                    echo -e "${NOTE} Rate limited (tag ${tag_name}), retry ${retry}/3, waiting 60s..."
+                    echo -e "${NOTE} HTTP ${http_code} (tag ${tag_name}), retry ${retry}/3, waiting 60s..."
                     sleep 60
                 else
                     echo -e "${ERROR} Failed to delete tag [ ${tag_name} ] (HTTP ${http_code})"
@@ -652,9 +569,9 @@ del_workflows_runs() {
                 if [[ "${http_code}" =~ ^(200|204)$ ]]; then
                     del_success=$((${del_success} + 1))
                     break
-                elif [[ "${http_code}" == "429" && "${retry}" -lt 3 ]]; then
+                elif [[ ("${http_code}" == "429" || "${http_code}" =~ ^5) && "${retry}" -lt 3 ]]; then
                     retry=$((${retry} + 1))
-                    echo -e "${NOTE} Rate limited (workflow run ${run_id}), retry ${retry}/3, waiting 60s..."
+                    echo -e "${NOTE} HTTP ${http_code} (workflow run ${run_id}), retry ${retry}/3, waiting 60s..."
                     sleep 60
                 else
                     echo -e "${ERROR} Failed to delete workflow run [ ${run_id} ] (HTTP ${http_code})"
@@ -678,7 +595,7 @@ echo -e "${STEPS} Welcome! Starting cleanup of older releases and workflow runs.
 trap cleanup EXIT
 
 # Execute operations in sequence
-init_var "${@}"
+init_var
 
 # Handle releases deletion
 if [[ "${delete_releases}" =~ ^(true|yes)$ ]]; then
