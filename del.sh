@@ -98,6 +98,16 @@ init_var() {
         IFS='/' read -r -a workflows_keep_keyword <<<"${INPUT_WORKFLOWS_KEEP_KEYWORD}"
     fi
 
+    # Validate integer parameters — reset to default if not a valid non-negative integer
+    if [[ ! "${releases_keep_latest}" =~ ^(0|[1-9][0-9]*)$ ]]; then
+        echo -e "${NOTE} Invalid value for releases_keep_latest: '${releases_keep_latest}', resetting to default [ 90 ]."
+        releases_keep_latest="90"
+    fi
+    if [[ ! "${workflows_keep_day}" =~ ^(0|[1-9][0-9]*)$ ]]; then
+        echo -e "${NOTE} Invalid value for workflows_keep_day: '${workflows_keep_day}', resetting to default [ 90 ]."
+        workflows_keep_day="90"
+    fi
+
     # Validate required parameters
     [[ -z "${gh_token}" ]] && error_msg "[ gh_token ] is required (must be set via the GH_TOKEN environment variable)."
 
@@ -521,7 +531,7 @@ out_workflows_list() {
             echo -e "${INFO} (2.5.1) Retention days set to 0, no workflow runs will be retained; all candidates will be deleted."
         else
             # Filter workflow runs within the retention period using a single jq pass for performance
-            cutoff_second=$(date -d "${workflows_keep_day} days ago" +%s)
+            cutoff_second=$(($(date +%s) - workflows_keep_day * 86400))
             tmp_wf_date="$(mktemp)"
             jq -c --argjson c "${cutoff_second}" 'select((.date | fromdateiso8601) >= $c)' \
                 "${all_workflows_list}" >"${keep_workflows_list}"
