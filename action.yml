@@ -7,45 +7,44 @@ inputs:
     required: false
     default: "${{ github.repository }}"
   delete_releases:
-    description: "Whether to delete releases records"
-    required: true
+    description: "Whether to delete releases records (true/false)"
+    required: false
     default: "false"
   delete_tags:
-    description: "Whether to delete associated tags"
+    description: "Whether to delete associated tags (true/false)"
     required: false
     default: "false"
   prerelease_option:
-    description: "Whether to differentiate pre-release"
+    description: "Filter scope by pre-release status (all/true/false)"
     required: false
     default: "all"
   releases_keep_latest:
-    description: "How many latest releases to keep"
+    description: "How many latest releases to keep (non-negative integer)"
     required: false
     default: "90"
   releases_keep_keyword:
-    description: "Keyword of the keep releases"
+    description: "Keyword(s) to keep releases, separated by / (e.g. book/tool)"
     required: false
     default: ""
   delete_workflows:
-    description: "Whether to delete workflows records"
-    required: true
+    description: "Whether to delete workflow run records (true/false)"
+    required: false
     default: "false"
   workflows_keep_day:
-    description: "Days to keep workflows"
+    description: "Days to keep workflow runs (non-negative integer)"
     required: false
     default: "90"
   workflows_keep_keyword:
-    description: "keywords for keep workflows"
+    description: "Keyword(s) to keep workflow runs, separated by / (e.g. book/tool)"
     required: false
     default: ""
   out_log:
-    description: "Output a list log for each step"
+    description: "Output detailed JSON logs for each step (true/false)"
     required: false
     default: "false"
   gh_token:
-    description: "Set the token"
+    description: "GitHub token for API authentication (needs contents: write, actions: write)"
     required: true
-    default: ""
 
 runs:
   using: "composite"
@@ -66,66 +65,13 @@ runs:
         INPUT_WORKFLOWS_KEEP_KEYWORD: ${{ inputs.workflows_keep_keyword }}
         INPUT_OUT_LOG: ${{ inputs.out_log }}
       run: |
-        #======================================= Define common functions =======================================
-        #
-        # Error output formatting
-        ERROR="[\033[91m ERROR \033[0m]"
-        error_msg() {
-            echo -e "${ERROR} ${1}"
-            exit 1
-        }
-        #
-        # Validate boolean parameter
-        validate_boolean() {
-            local var="${1}" param_name="${2}"
-            if [[ ! "${var}" =~ ^(true|false)$ ]]; then
-                error_msg "Invalid value for ${param_name}: '${var}' must be 'true' or 'false'."
-            fi
-        }
-        #
-        # Validate positive integer parameter
-        validate_integer() {
-            local var="${1}" param_name="${2}"
-            if [[ ! "${var}" =~ ^(0|[1-9][0-9]*)$ ]]; then
-                error_msg "Invalid value for ${param_name}: '${var}' must be a non-negative integer."
-            fi
-        }
-        #
-        # Validate pre-release option parameter
-        validate_prerelease() {
-            local var="${1}" param_name="${2}"
-            if [[ ! "${var}" =~ ^(true|false|all)$ ]]; then
-                error_msg "Invalid value for ${param_name}: '${var}' must be 'true', 'false', or 'all'."
-            fi
-        }
-        #
-        #====================================== Validate input parameters ======================================
-        #
         # Print the action path and workflow run ID for diagnostics
         echo -e "Action path: ${{ github.action_path }}"
         echo -e "Workflow Run ID: ${GITHUB_RUN_ID}"
-        #
-        # Validate required inputs
-        [[ -z "${GH_TOKEN}" ]]               && error_msg "The 'gh_token' input is required."
-        [[ -z "${INPUT_DELETE_RELEASES}" ]]  && error_msg "The 'delete_releases' input is required."
-        [[ -z "${INPUT_DELETE_WORKFLOWS}" ]] && error_msg "The 'delete_workflows' input is required."
-        #
-        # Validate optional inputs
-        [[ -n "${INPUT_DELETE_RELEASES}" ]]      && validate_boolean     "${INPUT_DELETE_RELEASES}"      "delete_releases"
-        [[ -n "${INPUT_DELETE_TAGS}" ]]          && validate_boolean     "${INPUT_DELETE_TAGS}"          "delete_tags"
-        [[ -n "${INPUT_PRERELEASE_OPTION}" ]]    && validate_prerelease  "${INPUT_PRERELEASE_OPTION}"    "prerelease_option"
-        [[ -n "${INPUT_RELEASES_KEEP_LATEST}" ]] && validate_integer     "${INPUT_RELEASES_KEEP_LATEST}" "releases_keep_latest"
-        [[ -n "${INPUT_DELETE_WORKFLOWS}" ]]     && validate_boolean     "${INPUT_DELETE_WORKFLOWS}"     "delete_workflows"
-        [[ -n "${INPUT_WORKFLOWS_KEEP_DAY}" ]]   && validate_integer     "${INPUT_WORKFLOWS_KEEP_DAY}"   "workflows_keep_day"
-        [[ -n "${INPUT_OUT_LOG}" ]]              && validate_boolean     "${INPUT_OUT_LOG}"              "out_log"
-        #
-        #===================================== Invoke the delete script ========================================
-        #
-        # All parameters are available as INPUT_* env vars — no CLI args needed.
+
+        # Use an absolute path to ensure the script can be found
         chmod +x "${{ github.action_path }}/del.sh"
         bash "${{ github.action_path }}/del.sh"
-        #
-        #=========================================== End of script =============================================
 
 branding:
   icon: "terminal"
